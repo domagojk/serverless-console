@@ -30,6 +30,7 @@ export class FunctionHandlersProvider
             {
               label: serviceName,
               serverlessJSON,
+              serverlessPath: serverlessPath.split('/serverless.yml')[0],
               type: 'service'
             },
             vscode.TreeItemCollapsibleState.Expanded

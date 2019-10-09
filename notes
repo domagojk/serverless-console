@@ -1,0 +1,12 @@
+----------
+*dev* | prod
+  function name: nekiHandler
+  endpoint: GET /asasas
+  last deployed: 2 hours ago
+  size: 30mb
+  deploy commit: 12sads (see diff) - ovo vj nije moguće bez serverless plugina
+
+  last 10 logs                      last 10 failed logs
+    + 1h ago (10 mb) - debug      - 1h ago (10 mb) - debug
+    -
+    -

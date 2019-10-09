@@ -4,19 +4,19 @@
   "description": "",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.38.0"
+    "vscode": "^1.36.0"
   },
   "categories": [
     "Other"
   ],
   "activationEvents": [
-    "onView:fnPerStage"
+    "onView:fnHandlerList"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "fnPerStage.refreshEntry",
+        "command": "fnHandlerList.refreshEntry",
         "title": "Refresh",
         "icon": {
           "light": "resources/light/refresh.svg",
@@ -24,28 +24,12 @@
         }
       },
       {
-        "command": "fnPerStage.addEntry",
-        "title": "Add"
-      },
-      {
-        "command": "fnPerStage.editEntry",
+        "command": "fnHandlerList.openFunction",
         "title": "Edit",
         "icon": {
-          "light": "resources/light/edit.svg",
-          "dark": "resources/dark/edit.svg"
+          "light": "resources/light/view.svg",
+          "dark": "resources/dark/view.svg"
         }
-      },
-      {
-        "command": "fnPerStage.editEntry2",
-        "title": "Edit",
-        "icon": {
-          "light": "resources/light/edit.svg",
-          "dark": "resources/dark/edit.svg"
-        }
-      },
-      {
-        "command": "fnPerStage.deleteEntry",
-        "title": "Delete"
       }
     ],
     "viewsContainers": {
@@ -62,44 +46,22 @@
         {
           "id": "fnHandlerList",
           "name": "Function Handlers"
-        },
-        {
-          "id": "fnPerStage",
-          "name": "Logs per stage"
-        },
-        {
-          "id": "lastFailed",
-          "name": "Last failed requests"
         }
       ]
     },
     "menus": {
-      "commandPalette": [
-        {
-          "command": "ftpExplorer.revealResource"
-        }
-      ],
       "view/title": [
         {
-          "command": "fnPerStage.refreshEntry",
-          "when": "view == fnPerStage",
+          "command": "fnHandlerList.refreshEntry",
+          "when": "view == fnHandlerList",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "fnPerStage.editEntry",
-          "when": "view == fnPerStage && viewItem == function",
+          "command": "fnHandlerList.openFunction",
+          "when": "view == fnHandlerList && viewItem == function",
           "group": "inline"
-        },
-        {
-          "command": "fnPerStage.editEntry2",
-          "when": "view == fnPerStage && viewItem == function",
-          "group": "inline"
-        },
-        {
-          "command": "fnPerStage.deleteEntry",
-          "when": "view == fnPerStage && viewItem == function"
         }
       ]
     }

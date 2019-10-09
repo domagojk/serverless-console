@@ -31,9 +31,10 @@ export class CustomTreeProvider implements vscode.TreeDataProvider<TreeItem> {
             {
               label: serviceName,
               serverlessJSON,
+              serverlessPath: serverlessPath.split('/serverless.yml')[0],
               type: 'service'
             },
-            vscode.TreeItemCollapsibleState.Expanded
+            vscode.TreeItemCollapsibleState.Collapsed
           )
         ]
       } else {
@@ -49,7 +50,7 @@ export class CustomTreeProvider implements vscode.TreeDataProvider<TreeItem> {
             type: 'stage',
             stage
           },
-          vscode.TreeItemCollapsibleState.Expanded
+          vscode.TreeItemCollapsibleState.Collapsed
         )
       })
     } else if (element.settings.type === 'stage') {
@@ -60,8 +61,7 @@ export class CustomTreeProvider implements vscode.TreeDataProvider<TreeItem> {
               ...element.settings,
               label: fnName,
               type: 'function',
-              function: fnName,
-              filePath: element.settings.serverlessJSON.functions[fnName].handler
+              function: fnName
             },
             vscode.TreeItemCollapsibleState.Collapsed
           )
