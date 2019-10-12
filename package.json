@@ -1,6 +1,6 @@
 {
-  "name": "serverless-monitor",
-  "displayName": "serverless-monitor",
+  "name": "serverlessmonitor",
+  "displayName": "serverless monitor",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -14,6 +14,21 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Serverless monitor",
+      "properties": {
+        "serverlessmonitor.serverlessYmlPaths": {
+          "type": "array",
+          "default": [
+            "serverless.yml"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Path(s) to serverless.yml definition file(s)."
+        }
+      }
+    },
     "commands": [
       {
         "command": "fnHandlerList.refreshEntry",
@@ -22,6 +37,18 @@
           "light": "resources/light/refresh.svg",
           "dark": "resources/dark/refresh.svg"
         }
+      },
+      {
+        "command": "fnHandlerList.addService",
+        "title": "Add service"
+      },
+      {
+        "command": "fnHandlerList.removeService",
+        "title": "Remove service"
+      },
+      {
+        "command": "fnHandlerList.openServerlessYml",
+        "title": "Open serverless.yml"
       },
       {
         "command": "fnHandlerList.openFunction",
@@ -35,17 +62,17 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "serverless-monitor",
+          "id": "serverlessmonitor",
           "title": "Serverless Monitor",
           "icon": "media/dep.svg"
         }
       ]
     },
     "views": {
-      "serverless-monitor": [
+      "serverlessmonitor": [
         {
           "id": "fnHandlerList",
-          "name": "Function Handlers"
+          "name": ""
         }
       ]
     },
@@ -55,6 +82,26 @@
           "command": "fnHandlerList.refreshEntry",
           "when": "view == fnHandlerList",
           "group": "navigation"
+        },
+        {
+          "command": "fnHandlerList.addService",
+          "when": "view == fnHandlerList",
+          "group": "navigation"
+        },
+        {
+          "command": "fnHandlerList.removeService",
+          "when": "view == fnHandlerList",
+          "group": "navigation"
+        },
+        {
+          "command": "fnHandlerList.openServerlessYml",
+          "when": "view == fnHandlerList",
+          "group": "navigation"
+        },
+        {
+          "command": "fnHandlerList.openFunction",
+          "when": "view == fnHandlerList",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -62,6 +109,21 @@
           "command": "fnHandlerList.openFunction",
           "when": "view == fnHandlerList && viewItem == function",
           "group": "inline"
+        },
+        {
+          "command": "fnHandlerList.openFunction",
+          "when": "view == fnHandlerList && viewItem == service",
+          "group": "inline"
+        },
+        {
+          "command": "fnHandlerList.openServerlessYml",
+          "when": "view == fnHandlerList && viewItem == service",
+          "group": "navigation"
+        },
+        {
+          "command": "fnHandlerList.removeService",
+          "when": "view == fnHandlerList && viewItem == service",
+          "group": "navigation"
         }
       ]
     }
