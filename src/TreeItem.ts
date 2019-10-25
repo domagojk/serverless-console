@@ -1,42 +1,23 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import { readdirSync } from 'fs'
-
-export type ServerlessYML = {
-  org: string
-  service: {
-    name: string
-  }
-  provider: {
-    name: string
-    runtime: string
-  }
-  functions: Record<
-    string,
-    {
-      handler: string
-      events: {
-        http: {
-          method: string
-          path: string
-        }
-      }[]
-    }
-  >
-}
+import { ServerlessYML, SlsConfig } from './extension'
 
 export class TreeItem extends vscode.TreeItem {
   uri: vscode.Uri
+  public panel: vscode.WebviewPanel
 
   constructor(
     public readonly settings: {
-      type: 'service' | 'stage' | 'function' | 'log'
+      type: string
+      icon?: 'log'
       label: string
       stage?: string
       description?: string
       function?: string
       filePath?: any
-      serverlessJSON: ServerlessYML
+      slsConfig?: SlsConfig
+      serverlessJSON?: ServerlessYML
       serverlessPath?: string
     },
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
@@ -45,12 +26,13 @@ export class TreeItem extends vscode.TreeItem {
     super(settings.filePath || settings.label, collapsibleState)
     this.contextValue = settings.type
 
-    if (settings.type === 'service') {
+    if (this.settings.icon === 'log') {
       this.iconPath = {
         light: path.join(__filename, '..', '..', 'media', 'dep.svg'),
         dark: path.join(__filename, '..', '..', 'media', 'dep.svg')
       }
     }
+
     if (settings.type === 'function') {
       const serverlessFn = this.settings.serverlessJSON.functions[
         this.settings.function
@@ -60,14 +42,19 @@ export class TreeItem extends vscode.TreeItem {
         .slice(0, handlerArr.length - 1)
         .join('/')
 
-      const handlerAbsDir = `${this.settings.serverlessPath}/${handlerRelativeDir}`
+      const handlerAbsDir = path.join(
+        this.settings.serverlessPath,
+        handlerRelativeDir
+      )
+
       const filesInDir = readdirSync(handlerAbsDir)
       const foundFile = filesInDir.find(fileName => {
         const nameArr = fileName.split('.')
         const handlerFileName = handlerArr[handlerArr.length - 1].split('.')[0]
         return nameArr.length === 2 && nameArr[0] === handlerFileName
       })
-      this.resourceUri = vscode.Uri.file(`${handlerAbsDir}/${foundFile}`)
+      const filePath = path.join(handlerAbsDir, foundFile)
+      this.resourceUri = vscode.Uri.file(filePath)
 
       if (foundFile) {
         this.command = {

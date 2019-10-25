@@ -1,21 +1,70 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode'
-import * as path from 'path'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
+import { getPrintCommands } from './settings'
+import { getWebviewContent } from './functionLogsWebview'
 import { TreeItem } from './TreeItem'
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-  const functionHandlersProvider = new FunctionHandlersProvider()
+export type SlsCommand = {
+  cwd: string
+  command: string
+  error?: string
+}
 
-  functionHandlersProvider.serverlessPath = transformPaths(getPaths())
+export const serverlessDefaults = {
+  provider: {
+    region: 'us-east-1',
+    stage: 'dev'
+  }
+}
 
-  vscode.window.registerTreeDataProvider(
-    'fnHandlerList',
-    functionHandlersProvider
-  )
+export type ServerlessYML = {
+  org: string
+  service: {
+    name: string
+  }
+  provider: {
+    region: string
+    name: string
+    runtime: string
+  }
+  functions: Record<
+    string,
+    {
+      handler: string
+      events: {
+        http: {
+          method: string
+          path: string
+        }
+      }[]
+    }
+  >
+}
+
+export type SlsConfig = {
+  slsCommands: SlsCommand[]
+  status?: 'done' | 'error'
+  error?: string
+  errorCommand?: SlsCommand
+  config?: {
+    command: SlsCommand
+    yml: ServerlessYML
+  }[]
+}
+
+export async function activate(context: vscode.ExtensionContext) {
+  // sls print commands saved in settings
+  const slsCommands = getPrintCommands()
+
+  // Tree Provider instances
+  const fnHandlerProvider = new FunctionHandlersProvider({ slsCommands })
+
+  // register tree data providers
+  vscode.window.registerTreeDataProvider('fnHandlerList', fnHandlerProvider)
+
+  fnHandlerProvider.slsPrintRefresh(slsCommands)
 
   vscode.commands.registerCommand(
     'serverlessMonitor.openFunction',
@@ -26,60 +75,89 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   vscode.commands.registerCommand(
-    'fnHandlerList.openFunction',
-    async (treeItem: TreeItem) => {}
-  )
+    'fnHandlerList.openLogs',
+    (treeItem: TreeItem) => {
+      if (!treeItem.panel) {
+        treeItem.panel = vscode.window.createWebviewPanel(
+          'catCoding', // Identifies the type of the webview. Used internally
+          `${treeItem.label} logs`,
+          vscode.ViewColumn.One
+        )
+      }
 
-  vscode.commands.registerCommand('fnHandlerList.addService', async () => {
-    const paths = await vscode.window.showOpenDialog({
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      filters: {
-        ServerlessDefinition: ['yml']
-      },
-      openLabel: 'Add service',
-      defaultUri: vscode.workspace.workspaceFolders[0].uri
-    })
-
-    if (!paths ||!paths[0]) {
-      return false
+      treeItem.panel.webview.html = getWebviewContent()
+      treeItem.panel.reveal()
     }
-
-    const rootPath = vscode.workspace.workspaceFolders[0].uri.path
-
-    vscode.workspace
-      .getConfiguration()
-      .update('serverlessmonitor.serverlessYmlPaths', [
-        ...getPaths(),
-        path.relative(rootPath, paths[0].path)
-      ])
-  })
+  )
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('serverlessmonitor.serverlessYmlPaths')) {
-        functionHandlersProvider.serverlessPath = transformPaths(getPaths())
-        functionHandlersProvider.refresh()
+        fnHandlerProvider.slsPrintRefresh(getPrintCommands())
       }
     })
   )
 
   vscode.commands.registerCommand('fnHandlerList.refreshEntry', () => {
-    functionHandlersProvider.refresh()
+    fnHandlerProvider.refresh()
+  })
+
+  vscode.commands.registerCommand('fnHandlerList.openServerlessYml', () => {
+    vscode.debug.startDebugging(
+      vscode.workspace.getWorkspaceFolder(
+        vscode.workspace.workspaceFolders[0].uri
+      ),
+      'slsMonitor.debugFn'
+    )
+  })
+
+  let bla = null
+  vscode.commands.registerCommand('slsMonitor.getFnName', () => {
+    //vscode.window.showErrorMessage('can not')
+    //return null
+    if (!bla) {
+      vscode.window.showQuickPick(['aa', 'bb']).then(a => {
+        bla = true
+        vscode.debug.startDebugging(
+          vscode.workspace.getWorkspaceFolder(
+            vscode.workspace.workspaceFolders[0].uri
+          ),
+          'slsMonitor.debugFn#2'
+        )
+      })
+
+      return null
+    } else {
+      return 'getSignedUrl'
+    }
+  })
+
+  const rootPath = vscode.workspace.workspaceFolders[0].uri.path
+
+  vscode.commands.registerCommand('slsMonitor.getFnPath', () => {
+    return rootPath + '/getSignedUrl'
+  })
+
+  vscode.commands.registerCommand('slsMonitor.getFnHandler', () => {
+    return 'handler'
+  })
+
+  vscode.commands.registerCommand('slsMonitor.getFnData', () => {
+    //return vscode.window.showQuickPick(['aa', 'bb'])
+
+    return '{"a": 33}'
+  })
+
+  vscode.commands.registerCommand('slsMonitor.execFnSnippet', () => {
+    return `require('${rootPath}/getSignedUrl').${'handler'}(${'{"a": 33}'})`
+  })
+
+  vscode.commands.registerCommand('slsMonitor.getEnvVars', () => {
+    return {
+      AAA: 123
+    }
   })
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {}
-
-function getPaths(): string {
-  return vscode.workspace
-    .getConfiguration()
-    .get('serverlessmonitor.serverlessYmlPaths')
-}
-
-function transformPaths(savedPaths) {
-  const rootPath = vscode.workspace.workspaceFolders[0].uri.path
-  return savedPaths.map(savedPath => path.join(rootPath, savedPath))
-}

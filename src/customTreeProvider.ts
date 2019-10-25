@@ -4,7 +4,8 @@ import * as fs from 'fs'
 import * as YAML from 'yaml'
 import * as AWS from 'aws-sdk'
 import * as moment from 'moment'
-import { TreeItem, ServerlessYML } from './TreeItem'
+import { TreeItem } from './TreeItem'
+import { ServerlessYML } from './extension'
 
 export class CustomTreeProvider implements vscode.TreeDataProvider<TreeItem> {
   getTreeItem(element: TreeItem): vscode.TreeItem {

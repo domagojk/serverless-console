@@ -1,16 +1,21 @@
 import * as vscode from 'vscode'
-import * as fs from 'fs'
 import * as YAML from 'yaml'
-import { TreeItem, ServerlessYML } from './TreeItem'
+import { TreeItem } from './TreeItem'
+import { SlsConfig, serverlessDefaults } from './extension'
+import { exec } from 'child_process'
 
 export class FunctionHandlersProvider
   implements vscode.TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | null> = new vscode.EventEmitter<TreeItem | null>()
   readonly onDidChangeTreeData: vscode.Event<TreeItem | null> = this
     ._onDidChangeTreeData.event
-  public serverlessPath: string[] = []
 
-  refresh() {
+  constructor(public slsConfig: SlsConfig) {}
+
+  refresh(slsConfig?: SlsConfig) {
+    if (slsConfig) {
+      this.slsConfig = slsConfig
+    }
     this._onDidChangeTreeData.fire()
   }
 
@@ -20,27 +25,55 @@ export class FunctionHandlersProvider
 
   async getChildren(element?: TreeItem): Promise<TreeItem[]> {
     if (!element) {
-      const services = this.serverlessPath
-        .filter(serverlessPath => this.pathExists(serverlessPath))
-        .map(serverlessPath => {
-          const serverlessFile = fs.readFileSync(serverlessPath, 'utf8')
-          const serverlessJSON: ServerlessYML = YAML.parse(serverlessFile)
-
-          return new TreeItem(
+      if (this.slsConfig.slsCommands.length === 0) {
+        return [
+          new TreeItem(
             {
-              label: serverlessJSON.service.name,
-              serverlessJSON,
-              serverlessPath: serverlessPath.split('/serverless.yml')[0],
+              label: 'no "serverless print" commands found',
+              serverlessJSON: null,
               type: 'service'
             },
-            vscode.TreeItemCollapsibleState.Expanded
+            vscode.TreeItemCollapsibleState.None
           )
-        })
-
-      if (services.length === 0) {
-        vscode.window.showInformationMessage('Workspace has no serverless.yml')
+        ]
+      } else if (this.slsConfig.status === 'error') {
+        console.log(this.slsConfig.error)
+        return [
+          new TreeItem(
+            {
+              label: `error running "${this.slsConfig.errorCommand.command}"`,
+              serverlessJSON: null,
+              type: 'service'
+            },
+            vscode.TreeItemCollapsibleState.None
+          )
+        ]
+      } else if (this.slsConfig.status === 'done') {
+        return this.slsConfig.config.map(
+          slsConfig =>
+            new TreeItem(
+              {
+                label: slsConfig.yml.service.name,
+                serverlessJSON: slsConfig.yml,
+                serverlessPath: `${slsConfig.command.cwd}`,
+                type: 'service'
+              },
+              vscode.TreeItemCollapsibleState.Expanded
+            )
+        )
+      } else {
+        return [
+          new TreeItem(
+            {
+              label: `loading...`,
+              description: 'running "sls print" command(s)',
+              serverlessJSON: null,
+              type: 'service'
+            },
+            vscode.TreeItemCollapsibleState.None
+          )
+        ]
       }
-      return services
     } else if (element.settings.type === 'service') {
       return Object.keys(element.settings.serverlessJSON.functions).map(
         fnName => {
@@ -58,13 +91,59 @@ export class FunctionHandlersProvider
     }
   }
 
-  private pathExists(p: string): boolean {
-    try {
-      fs.accessSync(p)
-    } catch (err) {
-      return false
-    }
+  slsPrintRefresh(slsCommands) {
+    this.refresh({
+      slsCommands,
+      config: []
+    })
 
-    return true
+    Promise.all(
+      slsCommands.map((slsPrintCommand, index) => {
+        return new Promise((resolve, reject) => {
+          exec(
+            slsPrintCommand.command,
+            {
+              cwd: slsPrintCommand.cwd
+            },
+            (err, stdout, stderr) => {
+              if (err) {
+                reject({
+                  index,
+                  error: stderr
+                })
+              } else {
+                const yml = YAML.parse(stdout)
+                resolve({
+                  command: slsCommands[index],
+                  yml: {
+                    ...yml,
+                    provider: {
+                      ...serverlessDefaults.provider,
+                      ...yml.provider
+                    }
+                  }
+                })
+              }
+            }
+          )
+        })
+      })
+    )
+      .then((config: any) => {
+        this.refresh({
+          slsCommands: slsCommands,
+          config,
+          status: 'done'
+        })
+      })
+      .catch(({ error, index }) => {
+        this.refresh({
+          slsCommands: slsCommands,
+          config: [],
+          status: 'error',
+          errorCommand: slsCommands[index],
+          error: error.message
+        })
+      })
   }
 }

@@ -20,12 +20,27 @@
         "serverlessmonitor.serverlessYmlPaths": {
           "type": "array",
           "default": [
-            "serverless.yml"
+            {
+              "cwd": "./",
+              "command": "sls print"
+            }
           ],
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "cwd": {
+                "type": "string",
+                "description": "path to service",
+                "default": "./"
+              },
+              "command": {
+                "type": "string",
+                "description": "serverless print command",
+                "default": "sls print"
+              }
+            }
           },
-          "description": "Path(s) to serverless.yml definition file(s)."
+          "description": "'serverless print' command(s) for retriving data about the service"
         }
       }
     },
@@ -39,20 +54,12 @@
         }
       },
       {
-        "command": "fnHandlerList.addService",
-        "title": "Add service"
-      },
-      {
-        "command": "fnHandlerList.removeService",
-        "title": "Remove service"
-      },
-      {
-        "command": "fnHandlerList.openServerlessYml",
-        "title": "Open serverless.yml"
-      },
-      {
         "command": "fnHandlerList.openFunction",
-        "title": "Edit",
+        "title": "Open function"
+      },
+      {
+        "command": "fnHandlerList.openLogs",
+        "title": "Open logs",
         "icon": {
           "light": "resources/light/view.svg",
           "dark": "resources/dark/view.svg"
@@ -84,46 +91,16 @@
           "group": "navigation"
         },
         {
-          "command": "fnHandlerList.addService",
-          "when": "view == fnHandlerList",
-          "group": "navigation"
-        },
-        {
-          "command": "fnHandlerList.removeService",
-          "when": "view == fnHandlerList",
-          "group": "navigation"
-        },
-        {
-          "command": "fnHandlerList.openServerlessYml",
-          "when": "view == fnHandlerList",
-          "group": "navigation"
-        },
-        {
           "command": "fnHandlerList.openFunction",
           "when": "view == fnHandlerList",
-          "group": "navigation"
+          "group": "2_moreActions"
         }
       ],
       "view/item/context": [
         {
-          "command": "fnHandlerList.openFunction",
+          "command": "fnHandlerList.openLogs",
           "when": "view == fnHandlerList && viewItem == function",
           "group": "inline"
-        },
-        {
-          "command": "fnHandlerList.openFunction",
-          "when": "view == fnHandlerList && viewItem == service",
-          "group": "inline"
-        },
-        {
-          "command": "fnHandlerList.openServerlessYml",
-          "when": "view == fnHandlerList && viewItem == service",
-          "group": "navigation"
-        },
-        {
-          "command": "fnHandlerList.removeService",
-          "when": "view == fnHandlerList && viewItem == service",
-          "group": "navigation"
         }
       ]
     }

@@ -1,3 +1,15 @@
+- drop on "cw query" idea in sidebar
+- develop better version of cloudwacth logs for serverless
+ - same as in console but with relative time
+ - syntax highlighting
+- logs are opened in "show log" context option in sidebar or using icon
+ - fetch last logs for opened query when first opened
+ - retry button
+- copy invoke function from aws extension
+  but instead of invoke use "debug"
+- add "debug function" context option
+- connect those two by providing "debug" option on any found json in logs
+
 ----------
 *dev* | prod
   function name: nekiHandler
