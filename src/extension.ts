@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode'
+import * as path from 'path'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
 import { getPrintCommands } from './settings'
 import { getWebviewContent } from './functionLogsWebview'
@@ -77,16 +78,15 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand(
     'fnHandlerList.openLogs',
     (treeItem: TreeItem) => {
-      if (!treeItem.panel) {
-        treeItem.panel = vscode.window.createWebviewPanel(
-          'catCoding', // Identifies the type of the webview. Used internally
-          `${treeItem.label} logs`,
-          vscode.ViewColumn.One
-        )
-      }
+      const mainJs = vscode.Uri.file(
+        path.join(context.extensionPath, 'resources/webview', 'main.js')
+      )
 
-      treeItem.panel.webview.html = getWebviewContent()
-      treeItem.panel.reveal()
+      getWebviewContent(
+        treeItem,
+        vscode.Uri.file(path.join(context.extensionPath, 'resources/webview')),
+        mainJs
+      )
     }
   )
 

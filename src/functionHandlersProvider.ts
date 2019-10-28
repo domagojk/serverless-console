@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import * as YAML from 'yaml'
 import { TreeItem } from './TreeItem'
 import { SlsConfig, serverlessDefaults } from './extension'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 
 export class FunctionHandlersProvider
   implements vscode.TreeDataProvider<TreeItem> {
@@ -100,6 +100,56 @@ export class FunctionHandlersProvider
     Promise.all(
       slsCommands.map((slsPrintCommand, index) => {
         return new Promise((resolve, reject) => {
+          // using spawn instead of exec
+          // because there was use case when stdout retutned a correct definition,
+          // and yet after 5+ seconds, stderr returned "socket hang up" error
+          const commandArr = slsPrintCommand.command.split(' ')
+          const child = spawn(commandArr[0], commandArr.slice(1), {
+            cwd: slsPrintCommand.cwd
+          })
+
+          let stdout = ''
+          let outputJson = null
+          child.stdout.setEncoding('utf8')
+          child.stdout.on('data', chunk => {
+            stdout += chunk
+            try {
+              outputJson = YAML.parse(stdout)
+            } catch (err) {
+              outputJson = null
+            }
+
+            if (outputJson && outputJson.service) {
+              resolve({
+                command: slsCommands[index],
+                yml: {
+                  ...outputJson,
+                  provider: {
+                    ...serverlessDefaults.provider,
+                    ...outputJson.provider
+                  }
+                }
+              })
+              child.kill()
+            }
+          })
+
+          let stderr = ''
+          child.stderr.setEncoding('utf8')
+          child.stderr.on('data', chunk => {
+            stderr += chunk
+          })
+
+          child.on('close', () => {
+            if (!outputJson) {
+              reject({
+                index,
+                error: stderr || stdout
+              })
+            }
+          })
+
+          /*
           exec(
             slsPrintCommand.command,
             {
@@ -126,6 +176,7 @@ export class FunctionHandlersProvider
               }
             }
           )
+          */
         })
       })
     )

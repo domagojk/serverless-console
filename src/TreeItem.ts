@@ -53,10 +53,11 @@ export class TreeItem extends vscode.TreeItem {
         const handlerFileName = handlerArr[handlerArr.length - 1].split('.')[0]
         return nameArr.length === 2 && nameArr[0] === handlerFileName
       })
-      const filePath = path.join(handlerAbsDir, foundFile)
-      this.resourceUri = vscode.Uri.file(filePath)
 
       if (foundFile) {
+        const filePath = path.join(handlerAbsDir, foundFile)
+        this.resourceUri = vscode.Uri.file(filePath)
+
         this.command = {
           command: 'serverlessMonitor.openFunction',
           title: 'open file',
