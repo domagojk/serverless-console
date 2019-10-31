@@ -15,3 +15,7 @@ export function getPrintCommands(): SlsCommand[] {
     }
   })
 }
+
+export function getFontSize(): number {
+  return vscode.workspace.getConfiguration(null, null).get('editor.fontSize')
+}

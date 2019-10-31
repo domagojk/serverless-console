@@ -3,9 +3,10 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
-import { getPrintCommands } from './settings'
+import { getPrintCommands, getFontSize } from './settings'
 import { getWebviewContent } from './functionLogsWebview'
 import { TreeItem } from './TreeItem'
+import { CloudWatchLogs } from 'aws-sdk'
 
 export type SlsCommand = {
   cwd: string
@@ -78,14 +79,69 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand(
     'fnHandlerList.openLogs',
     (treeItem: TreeItem) => {
-      const mainJs = vscode.Uri.file(
-        path.join(context.extensionPath, 'resources/webview', 'main.js')
-      )
+      const staticJs = 'resources/webview/build/static/js'
+      const staticCss = 'resources/webview/build/static/css'
+      const cwd = context.extensionPath
 
-      getWebviewContent(
+      getWebviewContent({
         treeItem,
-        vscode.Uri.file(path.join(context.extensionPath, 'resources/webview')),
-        mainJs
+        fontSize: getFontSize(),
+        localResourceRoot: vscode.Uri.file(path.join(cwd, 'resources/webview')),
+        jsFiles: [
+          vscode.Uri.file(path.join(cwd, staticJs, 'main1.js')),
+          vscode.Uri.file(path.join(cwd, staticJs, 'main2.js'))
+        ],
+        cssFiles: [
+          vscode.Uri.file(path.join(cwd, staticCss, 'main1.css')),
+          vscode.Uri.file(path.join(cwd, staticCss, 'main2.css'))
+        ]
+      })
+
+      treeItem.panel.webview.onDidReceiveMessage(
+        async message => {
+          switch (message.command) {
+            case 'getLogStreams': {
+              const cloudwatchlogs = new CloudWatchLogs({
+                region: treeItem.settings.serverlessJSON.provider.region
+              })
+              const logStreams = await cloudwatchlogs
+                .describeLogStreams({
+                  descending: true,
+                  logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`
+                })
+                .promise()
+
+              treeItem.panel.webview.postMessage({
+                messageId: message.messageId,
+                payload: {
+                  functionName: treeItem.settings.function,
+                  logStreams: logStreams.logStreams
+                }
+              })
+            }
+            case 'getLogEvents': {
+              const cloudwatchlogs = new CloudWatchLogs({
+                region: treeItem.settings.serverlessJSON.provider.region
+              })
+              const log = await cloudwatchlogs
+                .getLogEvents({
+                  logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`,
+                  logStreamName: message.payload.logStream
+                })
+                .promise()
+
+              treeItem.panel.webview.postMessage({
+                messageId: message.messageId,
+                payload: {
+                  functionName: treeItem.settings.function,
+                  logEvents: log.events
+                }
+              })
+            }
+          }
+        },
+        undefined,
+        context.subscriptions
       )
     }
   )
@@ -100,6 +156,44 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.registerCommand('fnHandlerList.refreshEntry', () => {
     fnHandlerProvider.refresh()
+  })
+
+  vscode.commands.registerCommand('fnHandlerList.openFunction', () => {
+    const cloudwatchlogs = new CloudWatchLogs({
+      region: 'us-east-1'
+    })
+
+    /*
+    cloudwatchlogs
+      .describeLogStreams({
+        descending: true,
+        logGroupName: `/aws/lambda/backend-dev-getSignedUrl`
+      })
+      .promise()
+      .then(a => {
+        console.log(JSON.stringify(a.logStreams, null, 2))
+      })
+      .catch(err => {
+        console.log(err)
+        return [] as AWS.CloudWatchLogs.LogStream[]
+      })
+      */
+
+    cloudwatchlogs
+      .getLogEvents({
+        logGroupName: `/aws/lambda/backend-dev-getSignedUrl`,
+        logStreamName: '2019/10/23/[$LATEST]1aff4d83011f41fc8aff950988ecf5e4'
+      })
+      .promise()
+      .then(a => {
+        let buf = Buffer.from(JSON.stringify(a.events))
+        let encodedData = buf.toString('base64')
+        console.log(encodedData)
+      })
+      .catch(err => {
+        console.log(err)
+        return [] as AWS.CloudWatchLogs.LogStream[]
+      })
   })
 
   vscode.commands.registerCommand('fnHandlerList.openServerlessYml', () => {
