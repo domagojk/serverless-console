@@ -76,6 +76,10 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   )
 
+  vscode.commands.registerCommand('fnHandlerList.showError', error => {
+    vscode.window.showErrorMessage(error)
+  })
+
   vscode.commands.registerCommand(
     'fnHandlerList.openLogs',
     (treeItem: TreeItem) => {
@@ -83,66 +87,100 @@ export async function activate(context: vscode.ExtensionContext) {
       const staticCss = 'resources/webview/build/static/css'
       const cwd = context.extensionPath
 
-      getWebviewContent({
-        treeItem,
-        fontSize: getFontSize(),
-        localResourceRoot: vscode.Uri.file(path.join(cwd, 'resources/webview')),
-        jsFiles: [
-          vscode.Uri.file(path.join(cwd, staticJs, 'main1.js')),
-          vscode.Uri.file(path.join(cwd, staticJs, 'main2.js'))
-        ],
-        cssFiles: [
-          vscode.Uri.file(path.join(cwd, staticCss, 'main1.css')),
-          vscode.Uri.file(path.join(cwd, staticCss, 'main2.css'))
-        ]
-      })
-
-      treeItem.panel.webview.onDidReceiveMessage(
-        async message => {
-          switch (message.command) {
-            case 'getLogStreams': {
-              const cloudwatchlogs = new CloudWatchLogs({
-                region: treeItem.settings.serverlessJSON.provider.region
-              })
-              const logStreams = await cloudwatchlogs
-                .describeLogStreams({
-                  descending: true,
-                  logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`
-                })
-                .promise()
-
-              treeItem.panel.webview.postMessage({
-                messageId: message.messageId,
-                payload: {
-                  functionName: treeItem.settings.function,
-                  logStreams: logStreams.logStreams
-                }
-              })
-            }
-            case 'getLogEvents': {
-              const cloudwatchlogs = new CloudWatchLogs({
-                region: treeItem.settings.serverlessJSON.provider.region
-              })
-              const log = await cloudwatchlogs
-                .getLogEvents({
-                  logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`,
-                  logStreamName: message.payload.logStream
-                })
-                .promise()
-
-              treeItem.panel.webview.postMessage({
-                messageId: message.messageId,
-                payload: {
-                  functionName: treeItem.settings.function,
-                  logEvents: log.events
-                }
-              })
-            }
-          }
-        },
-        undefined,
-        context.subscriptions
+      const localResourceRoot = vscode.Uri.file(
+        path.join(cwd, 'resources/webview')
       )
+
+      if (!treeItem.panel) {
+        treeItem.panel = vscode.window.createWebviewPanel(
+          'slsConsoleLogs',
+          `${treeItem.label}`,
+          vscode.ViewColumn.One,
+          {
+            retainContextWhenHidden: true,
+            enableScripts: true,
+            localResourceRoots: [localResourceRoot]
+          }
+        )
+
+        getWebviewContent({
+          panel: treeItem.panel,
+          fontSize: getFontSize(),
+          jsFiles: [
+            vscode.Uri.file(path.join(cwd, staticJs, 'main1.js')),
+            vscode.Uri.file(path.join(cwd, staticJs, 'main2.js')),
+            vscode.Uri.file(path.join(cwd, staticJs, 'main3.js'))
+          ],
+          cssFiles: [
+            vscode.Uri.file(path.join(cwd, staticCss, 'main1.css')),
+            vscode.Uri.file(path.join(cwd, staticCss, 'main2.css'))
+          ]
+        })
+
+        treeItem.panel.iconPath = {
+          light: vscode.Uri.file(path.join(cwd, 'resources/light/event.svg')),
+          dark: vscode.Uri.file(path.join(cwd, 'resources/dark/event.svg'))
+        }
+
+        treeItem.panel.webview.onDidReceiveMessage(
+          async message => {
+            switch (message.command) {
+              case 'getLogStreams': {
+                const cloudwatchlogs = new CloudWatchLogs({
+                  region: treeItem.settings.serverlessJSON.provider.region
+                })
+                const logStreams = await cloudwatchlogs
+                  .describeLogStreams({
+                    descending: true,
+
+                    logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`
+                  })
+                  .promise()
+
+                treeItem.panel.webview.postMessage({
+                  messageId: message.messageId,
+                  payload: {
+                    functionName: treeItem.settings.function,
+                    logStreams: logStreams.logStreams
+                  }
+                })
+                break
+              }
+              case 'getLogEvents':
+                {
+                  const cloudwatchlogs = new CloudWatchLogs({
+                    region: treeItem.settings.serverlessJSON.provider.region
+                  })
+                  const log = await cloudwatchlogs
+                    .getLogEvents({
+                      nextToken: message.payload.nextToken,
+                      logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`,
+                      logStreamName: message.payload.logStream
+                    })
+                    .promise()
+
+                  treeItem.panel.webview.postMessage({
+                    messageId: message.messageId,
+                    payload: {
+                      functionName: treeItem.settings.function,
+                      logEvents: log.events,
+                      nextBackwardToken: log.nextBackwardToken,
+                      nextForwardToken: log.nextForwardToken
+                    }
+                  })
+                }
+                break
+            }
+          },
+          undefined,
+          context.subscriptions
+        )
+
+        treeItem.panel.onDidDispose(() => {
+          delete treeItem.panel
+        })
+      }
+      treeItem.panel.reveal()
     }
   )
 
@@ -155,7 +193,7 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   vscode.commands.registerCommand('fnHandlerList.refreshEntry', () => {
-    fnHandlerProvider.refresh()
+    fnHandlerProvider.slsPrintRefresh(getPrintCommands())
   })
 
   vscode.commands.registerCommand('fnHandlerList.openFunction', () => {

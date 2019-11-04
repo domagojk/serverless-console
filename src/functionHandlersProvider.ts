@@ -37,7 +37,6 @@ export class FunctionHandlersProvider
           )
         ]
       } else if (this.slsConfig.status === 'error') {
-        console.log(this.slsConfig.error)
         return [
           new TreeItem(
             {
@@ -45,7 +44,12 @@ export class FunctionHandlersProvider
               serverlessJSON: null,
               type: 'service'
             },
-            vscode.TreeItemCollapsibleState.None
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'fnHandlerList.showError',
+              title: 'show error',
+              arguments: [this.slsConfig.error]
+            }
           )
         ]
       } else if (this.slsConfig.status === 'done') {
@@ -193,7 +197,7 @@ export class FunctionHandlersProvider
           config: [],
           status: 'error',
           errorCommand: slsCommands[index],
-          error: error.message
+          error
         })
       })
   }
