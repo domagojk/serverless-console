@@ -22,6 +22,7 @@
           "default": [
             {
               "type": "serverlessFramework",
+              "awsProfile": "default",
               "cwd": "./",
               "command": "sls print",
               "stages": [
@@ -36,6 +37,11 @@
                 "type": "string",
                 "description": "type of service (serverless or custom)",
                 "default": "serverlessFramework"
+              },
+              "awsProfile": {
+                "type": "string",
+                "description": "The name of the credential profile to obtain credentials from.",
+                "default": "default"
               },
               "cwd": {
                 "type": "string",

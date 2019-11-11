@@ -8,10 +8,15 @@ import { getWebviewContent } from './functionLogsWebview'
 import { TreeItem } from './TreeItem'
 import * as AWS from 'aws-sdk'
 
-var credentials = new AWS.SharedIniFileCredentials({
-  profile: 'default'
-})
-AWS.config.credentials = credentials
+function setAwsConfig(profile: string, region?: string) {
+  var credentials = new AWS.SharedIniFileCredentials({
+    profile
+  })
+  AWS.config.credentials = credentials
+  if (region) {
+    AWS.config.region = region
+  }
+}
 
 export type ServiceItem = {
   title: string
@@ -27,6 +32,8 @@ export type ServiceItem = {
 
 export type Service = {
   type: 'serverlessFramework' | 'custom'
+  awsProfile?: string
+  region?: string
   isLoading?: boolean
   error?: any
   title?: string
@@ -113,13 +120,16 @@ export async function activate(context: vscode.ExtensionContext) {
           async message => {
             switch (message.command) {
               case 'getLogStreams': {
-                const cloudwatchlogs = new AWS.CloudWatchLogs({
-                  region: 'us-east-1'
-                })
+                setAwsConfig(
+                  treeItem.settings.service.awsProfile,
+                  treeItem.settings.service.region
+                )
+                const cloudwatchlogs = new AWS.CloudWatchLogs()
 
                 try {
                   const logStreams = await cloudwatchlogs
                     .describeLogStreams({
+                      orderBy: 'LastEventTime',
                       nextToken: message.payload.nextToken,
                       descending: true,
                       logGroupName: message.payload.logGroupName
@@ -131,6 +141,14 @@ export async function activate(context: vscode.ExtensionContext) {
                     payload: {
                       nextToken: logStreams.nextToken,
                       logStreams: logStreams.logStreams
+                        .map(logStream => {
+                          return {
+                            ...logStream,
+                            sortByTimestamp:
+                              logStream.lastEventTimestamp ||
+                              logStream.creationTime
+                          }
+                        })
                     }
                   })
                 } catch (err) {
@@ -148,13 +166,15 @@ export async function activate(context: vscode.ExtensionContext) {
               }
               case 'getLogEvents':
                 {
-                  const cloudwatchlogs = new AWS.CloudWatchLogs({
-                    region: 'us-east-1'
-                  })
+                  setAwsConfig(
+                    treeItem.settings.service.awsProfile,
+                    treeItem.settings.service.region
+                  )
+                  const cloudwatchlogs = new AWS.CloudWatchLogs()
                   const log = await cloudwatchlogs
                     .getLogEvents({
                       nextToken: message.payload.nextToken,
-                      logGroupName: treeItem.settings.serviceItem.tabs[0].logs,
+                      logGroupName: message.payload.logGroup,
                       logStreamName: message.payload.logStream
                     })
                     .promise()

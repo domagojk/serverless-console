@@ -70,6 +70,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
         resolve({
           ...service,
           title: yml.service.name,
+          region: yml.provider.region,
           items: Object.keys(yml.functions).map(fnName => {
             const handler = yml.functions[fnName].handler
             const handlerArr = handler.split('/')
