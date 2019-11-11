@@ -17,17 +17,26 @@
     "configuration": {
       "title": "Serverless monitor",
       "properties": {
-        "serverlessmonitor.serverlessYmlPaths": {
+        "serverlessConsole.services": {
           "type": "array",
           "default": [
             {
+              "type": "serverlessFramework",
               "cwd": "./",
-              "command": "sls print"
+              "command": "sls print",
+              "stages": [
+                "dev"
+              ]
             }
           ],
           "items": {
             "type": "object",
             "properties": {
+              "type": {
+                "type": "string",
+                "description": "type of service (serverless or custom)",
+                "default": "serverlessFramework"
+              },
               "cwd": {
                 "type": "string",
                 "description": "path to service",
@@ -37,6 +46,15 @@
                 "type": "string",
                 "description": "serverless print command",
                 "default": "sls print"
+              },
+              "stages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "items": {
+                "type": "array"
               }
             }
           },
@@ -54,8 +72,12 @@
         }
       },
       {
-        "command": "fnHandlerList.openFunction",
-        "title": "Open function"
+        "command": "serverlessConsole.openFunction",
+        "title": "Open function",
+        "icon": {
+          "light": "resources/light/open-file.svg",
+          "dark": "resources/dark/open-file.svg"
+        }
       },
       {
         "command": "fnHandlerList.openLogs",
@@ -91,15 +113,15 @@
           "group": "navigation"
         },
         {
-          "command": "fnHandlerList.openFunction",
+          "command": "fnHandlerList.openLogs",
           "when": "view == fnHandlerList",
           "group": "2_moreActions"
         }
       ],
       "view/item/context": [
         {
-          "command": "fnHandlerList.openLogs",
-          "when": "view == fnHandlerList && viewItem == function",
+          "command": "serverlessConsole.openFunction",
+          "when": "view == fnHandlerList && viewItem == function-localRef",
           "group": "inline"
         }
       ]

@@ -3,76 +3,58 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
-import { getPrintCommands, getFontSize } from './settings'
+import { getServices, getFontSize } from './settings'
 import { getWebviewContent } from './functionLogsWebview'
 import { TreeItem } from './TreeItem'
-import { CloudWatchLogs } from 'aws-sdk'
+import * as AWS from 'aws-sdk'
 
-export type SlsCommand = {
-  cwd: string
-  command: string
-  error?: string
-}
+var credentials = new AWS.SharedIniFileCredentials({
+  profile: 'default'
+})
+AWS.config.credentials = credentials
 
-export const serverlessDefaults = {
-  provider: {
-    region: 'us-east-1',
-    stage: 'dev'
-  }
-}
-
-export type ServerlessYML = {
-  org: string
-  service: {
-    name: string
-  }
-  provider: {
+export type ServiceItem = {
+  title: string
+  description?: string
+  uri?: any
+  tabs?: {
     region: string
-    name: string
-    runtime: string
-  }
-  functions: Record<
-    string,
-    {
-      handler: string
-      events: {
-        http: {
-          method: string
-          path: string
-        }
-      }[]
-    }
-  >
+    title: string
+    logs?: string
+    lambda?: string
+  }[]
 }
 
-export type SlsConfig = {
-  slsCommands: SlsCommand[]
-  status?: 'done' | 'error'
-  error?: string
-  errorCommand?: SlsCommand
-  config?: {
-    command: SlsCommand
-    yml: ServerlessYML
-  }[]
+export type Service = {
+  type: 'serverlessFramework' | 'custom'
+  isLoading?: boolean
+  error?: any
+  title?: string
+  cwd?: string
+  command?: string
+  stages?: string[]
+  items?: ServiceItem[]
 }
 
 export async function activate(context: vscode.ExtensionContext) {
   // sls print commands saved in settings
-  const slsCommands = getPrintCommands()
+  const services = getServices()
 
   // Tree Provider instances
-  const fnHandlerProvider = new FunctionHandlersProvider({ slsCommands })
+  const fnHandlerProvider = new FunctionHandlersProvider(services)
 
   // register tree data providers
   vscode.window.registerTreeDataProvider('fnHandlerList', fnHandlerProvider)
 
-  fnHandlerProvider.slsPrintRefresh(slsCommands)
+  fnHandlerProvider.refreshAll(services)
 
   vscode.commands.registerCommand(
-    'serverlessMonitor.openFunction',
-    async uri => {
-      let doc = await vscode.workspace.openTextDocument(uri)
-      await vscode.window.showTextDocument(doc, { preview: true })
+    'serverlessConsole.openFunction',
+    async (treeItem: TreeItem) => {
+      if (treeItem.uri) {
+        let doc = await vscode.workspace.openTextDocument(treeItem.uri)
+        await vscode.window.showTextDocument(doc, { preview: false })
+      }
     }
   )
 
@@ -114,7 +96,12 @@ export async function activate(context: vscode.ExtensionContext) {
           cssFiles: [
             vscode.Uri.file(path.join(cwd, staticCss, 'main1.css')),
             vscode.Uri.file(path.join(cwd, staticCss, 'main2.css'))
-          ]
+          ],
+          inlineJs: `
+            document.vscodeData = {
+              tabs: ${JSON.stringify(treeItem.settings.serviceItem.tabs)}
+            }
+          `
         })
 
         treeItem.panel.iconPath = {
@@ -126,35 +113,46 @@ export async function activate(context: vscode.ExtensionContext) {
           async message => {
             switch (message.command) {
               case 'getLogStreams': {
-                const cloudwatchlogs = new CloudWatchLogs({
-                  region: treeItem.settings.serverlessJSON.provider.region
+                const cloudwatchlogs = new AWS.CloudWatchLogs({
+                  region: 'us-east-1'
                 })
-                const logStreams = await cloudwatchlogs
-                  .describeLogStreams({
-                    descending: true,
 
-                    logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`
+                try {
+                  const logStreams = await cloudwatchlogs
+                    .describeLogStreams({
+                      descending: true,
+                      logGroupName: message.payload.logGroupName
+                    })
+                    .promise()
+
+                  treeItem.panel.webview.postMessage({
+                    messageId: message.messageId,
+                    payload: {
+                      logStreams: logStreams.logStreams
+                    }
                   })
-                  .promise()
-
-                treeItem.panel.webview.postMessage({
-                  messageId: message.messageId,
-                  payload: {
-                    functionName: treeItem.settings.function,
-                    logStreams: logStreams.logStreams
-                  }
-                })
+                } catch (err) {
+                  treeItem.panel.webview.postMessage({
+                    messageId: message.messageId,
+                    payload: {
+                      error:
+                        err && err.message
+                          ? err.message
+                          : 'error retriving log streams'
+                    }
+                  })
+                }
                 break
               }
               case 'getLogEvents':
                 {
-                  const cloudwatchlogs = new CloudWatchLogs({
-                    region: treeItem.settings.serverlessJSON.provider.region
+                  const cloudwatchlogs = new AWS.CloudWatchLogs({
+                    region: 'us-east-1'
                   })
                   const log = await cloudwatchlogs
                     .getLogEvents({
                       nextToken: message.payload.nextToken,
-                      logGroupName: `/aws/lambda/backend-dev-${treeItem.settings.function}`,
+                      logGroupName: treeItem.settings.serviceItem.tabs[0].logs,
                       logStreamName: message.payload.logStream
                     })
                     .promise()
@@ -162,7 +160,7 @@ export async function activate(context: vscode.ExtensionContext) {
                   treeItem.panel.webview.postMessage({
                     messageId: message.messageId,
                     payload: {
-                      functionName: treeItem.settings.function,
+                      functionName: treeItem.label,
                       logEvents: log.events,
                       nextBackwardToken: log.nextBackwardToken,
                       nextForwardToken: log.nextForwardToken
@@ -186,109 +184,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('serverlessmonitor.serverlessYmlPaths')) {
-        fnHandlerProvider.slsPrintRefresh(getPrintCommands())
+      if (e.affectsConfiguration('serverlessConsole.services')) {
+        fnHandlerProvider.refreshAll(getServices())
       }
     })
   )
 
   vscode.commands.registerCommand('fnHandlerList.refreshEntry', () => {
-    fnHandlerProvider.slsPrintRefresh(getPrintCommands())
+    fnHandlerProvider.refreshAll(getServices())
   })
 
-  vscode.commands.registerCommand('fnHandlerList.openFunction', () => {
-    const cloudwatchlogs = new CloudWatchLogs({
-      region: 'us-east-1'
-    })
-
-    /*
-    cloudwatchlogs
-      .describeLogStreams({
-        descending: true,
-        logGroupName: `/aws/lambda/backend-dev-getSignedUrl`
-      })
-      .promise()
-      .then(a => {
-        console.log(JSON.stringify(a.logStreams, null, 2))
-      })
-      .catch(err => {
-        console.log(err)
-        return [] as AWS.CloudWatchLogs.LogStream[]
-      })
-      */
-
-    cloudwatchlogs
-      .getLogEvents({
-        logGroupName: `/aws/lambda/backend-dev-getSignedUrl`,
-        logStreamName: '2019/10/23/[$LATEST]1aff4d83011f41fc8aff950988ecf5e4'
-      })
-      .promise()
-      .then(a => {
-        let buf = Buffer.from(JSON.stringify(a.events))
-        let encodedData = buf.toString('base64')
-        console.log(encodedData)
-      })
-      .catch(err => {
-        console.log(err)
-        return [] as AWS.CloudWatchLogs.LogStream[]
-      })
-  })
-
-  vscode.commands.registerCommand('fnHandlerList.openServerlessYml', () => {
-    vscode.debug.startDebugging(
-      vscode.workspace.getWorkspaceFolder(
-        vscode.workspace.workspaceFolders[0].uri
-      ),
-      'slsMonitor.debugFn'
-    )
-  })
-
-  let bla = null
-  vscode.commands.registerCommand('slsMonitor.getFnName', () => {
-    //vscode.window.showErrorMessage('can not')
-    //return null
-    if (!bla) {
-      vscode.window.showQuickPick(['aa', 'bb']).then(a => {
-        bla = true
-        vscode.debug.startDebugging(
-          vscode.workspace.getWorkspaceFolder(
-            vscode.workspace.workspaceFolders[0].uri
-          ),
-          'slsMonitor.debugFn#2'
-        )
-      })
-
-      return null
-    } else {
-      return 'getSignedUrl'
-    }
-  })
-
-  const rootPath = vscode.workspace.workspaceFolders[0].uri.path
-
-  vscode.commands.registerCommand('slsMonitor.getFnPath', () => {
-    return rootPath + '/getSignedUrl'
-  })
-
-  vscode.commands.registerCommand('slsMonitor.getFnHandler', () => {
-    return 'handler'
-  })
-
-  vscode.commands.registerCommand('slsMonitor.getFnData', () => {
-    //return vscode.window.showQuickPick(['aa', 'bb'])
-
-    return '{"a": 33}'
-  })
-
-  vscode.commands.registerCommand('slsMonitor.execFnSnippet', () => {
-    return `require('${rootPath}/getSignedUrl').${'handler'}(${'{"a": 33}'})`
-  })
-
-  vscode.commands.registerCommand('slsMonitor.getEnvVars', () => {
-    return {
-      AAA: 123
-    }
-  })
+  // debug lambda archived
+  // https://gist.github.com/domagojk/2380ce14dcabf6b138ab5f81b43717f0
 }
 
 // this method is called when your extension is deactivated

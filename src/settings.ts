@@ -1,19 +1,23 @@
-import { SlsCommand } from './extension'
 import * as vscode from 'vscode'
 import * as path from 'path'
+import { Service } from './extension'
 
-export function getPrintCommands(): SlsCommand[] {
-  const commands =
+export function getServices(): Service[] {
+  const services =
     vscode.workspace
       .getConfiguration()
-      .get('serverlessmonitor.serverlessYmlPaths') || ([] as any)
+      .get('serverlessConsole.services') || ([] as any)
 
-  return commands.map(conf => {
-    return {
-      ...conf,
-      cwd: path.join(vscode.workspace.workspaceFolders[0].uri.path, conf.cwd)
-    }
-  })
+    return services.map(conf => {
+      if (conf.type === 'serverlessFramework') {
+        return {
+          ...conf,
+          cwd: path.join(vscode.workspace.workspaceFolders[0].uri.path, conf.cwd)
+        }
+      } else {
+        return conf
+      }
+    })
 }
 
 export function getFontSize(): number {

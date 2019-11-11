@@ -4,12 +4,14 @@ export async function getWebviewContent({
   fontSize,
   panel,
   jsFiles,
-  cssFiles
+  cssFiles,
+  inlineJs
 }: {
   fontSize: number
   panel: vscode.WebviewPanel
   jsFiles: vscode.Uri[]
   cssFiles: vscode.Uri[]
+  inlineJs?: string
 }) {
   const jsFilesSrc = jsFiles.map(
     jsFile => `<script src="${panel.webview.asWebviewUri(jsFile)}"></script>`
@@ -35,11 +37,7 @@ export async function getWebviewContent({
             font-size: ${fontSize}px;
           }
         </style>
-        <script>
-          window.slsConsole = {
-            darkTheme: false
-          }
-        </script>
+        ${inlineJs ? `<script>${inlineJs}</script>` : ''}
       </head>
       <body class="">
         <div id="root"></div>
