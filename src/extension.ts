@@ -120,6 +120,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 try {
                   const logStreams = await cloudwatchlogs
                     .describeLogStreams({
+                      nextToken: message.payload.nextToken,
                       descending: true,
                       logGroupName: message.payload.logGroupName
                     })
@@ -128,6 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
                   treeItem.panel.webview.postMessage({
                     messageId: message.messageId,
                     payload: {
+                      nextToken: logStreams.nextToken,
                       logStreams: logStreams.logStreams
                     }
                   })
