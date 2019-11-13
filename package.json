@@ -59,6 +59,11 @@
                   "type": "string"
                 }
               },
+              "timeOffsetInMs": {
+                "type": "number",
+                "description": "Timestamp offset (useful if you are in different timezone)",
+                "default": 0
+              },
               "items": {
                 "type": "array"
               }

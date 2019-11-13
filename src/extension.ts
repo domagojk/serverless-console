@@ -40,6 +40,7 @@ export type Service = {
   cwd?: string
   command?: string
   stages?: string[]
+  timeOffsetInMs?: number
   items?: ServiceItem[]
 }
 
@@ -75,6 +76,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const staticJs = 'resources/webview/build/static/js'
       const staticCss = 'resources/webview/build/static/css'
       const cwd = context.extensionPath
+      const service = treeItem.settings.service
 
       const localResourceRoot = vscode.Uri.file(
         path.join(cwd, 'resources/webview')
@@ -120,10 +122,7 @@ export async function activate(context: vscode.ExtensionContext) {
           async message => {
             switch (message.command) {
               case 'getLogStreams': {
-                setAwsConfig(
-                  treeItem.settings.service.awsProfile,
-                  treeItem.settings.service.region
-                )
+                setAwsConfig(service.awsProfile, service.region)
                 const cloudwatchlogs = new AWS.CloudWatchLogs()
 
                 try {
@@ -140,15 +139,17 @@ export async function activate(context: vscode.ExtensionContext) {
                     messageId: message.messageId,
                     payload: {
                       nextToken: logStreams.nextToken,
-                      logStreams: logStreams.logStreams
-                        .map(logStream => {
-                          return {
-                            ...logStream,
-                            sortByTimestamp:
-                              logStream.lastEventTimestamp ||
-                              logStream.creationTime
-                          }
-                        })
+                      logStreams: logStreams.logStreams.map(logStream => {
+                        const timestamp =
+                          logStream.lastEventTimestamp || logStream.creationTime
+
+                        return {
+                          ...logStream,
+                          sortByTimestamp: service.timeOffsetInMs
+                            ? timestamp + service.timeOffsetInMs
+                            : timestamp
+                        }
+                      })
                     }
                   })
                 } catch (err) {
@@ -183,13 +184,56 @@ export async function activate(context: vscode.ExtensionContext) {
                     messageId: message.messageId,
                     payload: {
                       functionName: treeItem.label,
-                      logEvents: log.events,
+                      logEvents: log.events.map(log => {
+                        return {
+                          ...log,
+                          timestamp: service.timeOffsetInMs
+                            ? log.timestamp + service.timeOffsetInMs
+                            : log.timestamp
+                        }
+                      }),
                       nextBackwardToken: log.nextBackwardToken,
                       nextForwardToken: log.nextForwardToken
                     }
                   })
                 }
                 break
+              case 'getLambdaOverview': {
+                setAwsConfig(
+                  treeItem.settings.service.awsProfile,
+                  treeItem.settings.service.region
+                )
+                const lambda = new AWS.Lambda()
+                try {
+                  const lambdaOverview = await lambda
+                    .getFunction({
+                      FunctionName: message.payload.fnName
+                    })
+                    .promise()
+
+                  treeItem.panel.webview.postMessage({
+                    messageId: message.messageId,
+                    payload: {
+                      codeSize: lambdaOverview.Configuration.CodeSize,
+                      lastModified: lambdaOverview.Configuration.LastModified,
+                      memorySize: lambdaOverview.Configuration.MemorySize,
+                      runtime: lambdaOverview.Configuration.Runtime,
+                      timeout: lambdaOverview.Configuration.Timeout
+                    }
+                  })
+                } catch (err) {
+                  treeItem.panel.webview.postMessage({
+                    messageId: message.messageId,
+                    payload: {
+                      error:
+                        err && err.message
+                          ? err.message
+                          : 'error retriving function overview'
+                    }
+                  })
+                }
+                break
+              }
             }
           },
           undefined,
