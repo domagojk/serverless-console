@@ -1,6 +1,6 @@
 {
-  "name": "serverlessmonitor",
-  "displayName": "serverless monitor",
+  "name": "serverlessconsole",
+  "displayName": "serverless console",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -15,7 +15,7 @@
   "main": "./out/extension.js",
   "contributes": {
     "configuration": {
-      "title": "Serverless monitor",
+      "title": "Serverless Console",
       "properties": {
         "serverlessConsole.services": {
           "type": "array",
@@ -25,6 +25,7 @@
               "awsProfile": "default",
               "cwd": "./",
               "command": "sls print",
+              "timeOffsetInMs": 0,
               "stages": [
                 "dev"
               ]
@@ -35,7 +36,7 @@
             "properties": {
               "type": {
                 "type": "string",
-                "description": "type of service (serverless or custom)",
+                "description": "type of service (serverlessFramework or custom)",
                 "default": "serverlessFramework"
               },
               "awsProfile": {
@@ -45,7 +46,7 @@
               },
               "cwd": {
                 "type": "string",
-                "description": "path to service",
+                "description": "Working directory in which serverless print command will be executed",
                 "default": "./"
               },
               "command": {
@@ -64,8 +65,47 @@
                 "description": "Timestamp offset (useful if you are in different timezone)",
                 "default": 0
               },
+              "region": {
+                "type": "string",
+                "default": "us-east-1"
+              },
+              "title": {
+                "type": "string"
+              },
               "items": {
-                "type": "array"
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "tabs": {
+                      "type": "array",
+                      "description": "There should always be at least one tab",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "description": "Tab title"
+                          },
+                          "logs": {
+                            "type": "string",
+                            "description": "CloudWatch LogGroup name"
+                          },
+                          "lambda": {
+                            "type": "string",
+                            "description": "If provided, the Lambda overview will be shown"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           },
@@ -75,7 +115,7 @@
     },
     "commands": [
       {
-        "command": "fnHandlerList.refreshEntry",
+        "command": "serverlessConsole.refreshEntry",
         "title": "Refresh",
         "icon": {
           "light": "resources/light/refresh.svg",
@@ -91,25 +131,29 @@
         }
       },
       {
-        "command": "fnHandlerList.openLogs",
-        "title": "Open logs",
+        "command": "serverlessConsole.showHelpPage",
+        "title": "Add Service",
         "icon": {
           "light": "resources/light/view.svg",
           "dark": "resources/dark/view.svg"
         }
+      },
+      {
+        "command": "serverlessConsole.openWorkspaceSettingsJson",
+        "title": "Open Workspace Settings JSON"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "serverlessmonitor",
+          "id": "serverlessConsole",
           "title": "Serverless Console",
           "icon": "resources/dark/event.svg"
         }
       ]
     },
     "views": {
-      "serverlessmonitor": [
+      "serverlessConsole": [
         {
           "id": "fnHandlerList",
           "name": ""
@@ -119,12 +163,12 @@
     "menus": {
       "view/title": [
         {
-          "command": "fnHandlerList.refreshEntry",
+          "command": "serverlessConsole.refreshEntry",
           "when": "view == fnHandlerList",
           "group": "navigation"
         },
         {
-          "command": "fnHandlerList.openLogs",
+          "command": "serverlessConsole.showHelpPage",
           "when": "view == fnHandlerList",
           "group": "2_moreActions"
         }

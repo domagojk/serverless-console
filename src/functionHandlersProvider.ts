@@ -29,6 +29,20 @@ export class FunctionHandlersProvider
         ]
       }
       return this.services.map(service => {
+        if (service.isLoading) {
+          return new TreeItem(
+            {
+              label: service.command
+                ? `running "${service.command}"...`
+                : service.title,
+              icon: 'loading',
+              type: 'service',
+              service
+            },
+            vscode.TreeItemCollapsibleState.None
+          )
+        }
+
         if (service.error) {
           return new TreeItem(
             {
@@ -48,17 +62,12 @@ export class FunctionHandlersProvider
 
         return new TreeItem(
           {
-            label:
-              service.isLoading && service.command
-                ? `running "${service.command}"...`
-                : service.title,
-            icon: service.isLoading ? 'loading' : null,
+            label: service.title,
+            icon: null,
             type: 'service',
             service
           },
-          service.isLoading
-            ? vscode.TreeItemCollapsibleState.None
-            : vscode.TreeItemCollapsibleState.Expanded
+          vscode.TreeItemCollapsibleState.Expanded
         )
       })
     } else if (element.settings.type === 'service') {

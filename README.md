@@ -1,6 +1,6 @@
-# serverless-monitor README
+# Serverless Console README
 
-This is the README for your extension "serverless-monitor". After writing up a brief description, we recommend including the following sections.
+This is the README for your extension "serverless-console". After writing up a brief description, we recommend including the following sections.
 
 ## Features
 

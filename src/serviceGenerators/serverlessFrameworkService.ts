@@ -105,7 +105,6 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
                   }`
                 : null,
               tabs: service.stages.map(stage => ({
-                region: null,
                 title: stage,
                 logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
                 lambda: `${yml.service.name}-${stage}-${fnName}`

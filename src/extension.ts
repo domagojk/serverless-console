@@ -7,6 +7,7 @@ import { getServices, getFontSize } from './settings'
 import { getWebviewContent } from './functionLogsWebview'
 import { TreeItem } from './TreeItem'
 import * as AWS from 'aws-sdk'
+import { readFileSync } from 'fs'
 
 function setAwsConfig(profile: string, region?: string) {
   var credentials = new AWS.SharedIniFileCredentials({
@@ -23,7 +24,6 @@ export type ServiceItem = {
   description?: string
   uri?: any
   tabs?: {
-    region: string
     title: string
     logs?: string
     lambda?: string
@@ -71,6 +71,132 @@ export async function activate(context: vscode.ExtensionContext) {
   })
 
   vscode.commands.registerCommand(
+    'serverlessConsole.showHelpPage',
+    async () => {
+      const content = readFileSync(
+        path.join(__filename, '..', '..', 'src/help.md'),
+        {
+          encoding: 'utf8'
+        }
+      )
+      let doc = await vscode.workspace.openTextDocument({
+        content,
+        language: `markdown`
+      })
+
+      let res = (await vscode.commands.executeCommand(
+        'markdown.api.render',
+        doc.getText()
+      )) as string
+
+      const staticCss = 'resources/webview/build/static/css'
+      const cwd = context.extensionPath
+
+      const localResourceRoot = vscode.Uri.file(
+        path.join(cwd, 'resources/webview')
+      )
+
+      const cssFiles = [
+        vscode.Uri.file(path.join(cwd, staticCss, 'main1.css')),
+        vscode.Uri.file(path.join(cwd, staticCss, 'main2.css'))
+      ]
+
+      let webview = vscode.window.createWebviewPanel(
+        'test',
+        `Serverless Console`,
+        vscode.ViewColumn.One,
+        {
+          enableScripts: true
+        }
+      )
+
+      const cssFilesSrc = cssFiles.map(
+        cssFile =>
+          `<link href="${webview.webview.asWebviewUri(
+            cssFile
+          )}" rel="stylesheet" />`
+      )
+
+      webview.webview.html = `<!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width,initial-scale=1" />
+          ${cssFilesSrc.join('\n')}
+          <style>
+            body {
+              padding: 1em 4.5em;
+              line-height: 1.7;
+            }
+            h1, h2, h3 {
+              padding-top: 1em
+            }
+            pre {
+              font-size:0.9em;
+              line-height:1.4;
+              padding: 10px;
+              border-radius: 3px;
+              overflow: auto;
+            }
+            .vscode-light pre, .vscode-light code {
+              background: rgba(220, 220, 220, 0.4);
+            }
+            .vscode-dark pre, .vscode-dark code {
+              background: rgba(10, 10, 10, 0.2);
+            }
+            
+          </style>
+        </head>
+        <body>
+          ${res}
+          <script>
+          const vscode = acquireVsCodeApi();
+          for (const link of document.querySelectorAll('a')) {
+              link.addEventListener('click', () => {
+                  vscode.postMessage({
+                      command: link.getAttribute('href'),
+                  });
+              });
+          }
+          </script>
+        </body>
+      </html>
+      `
+
+      webview.webview.onDidReceiveMessage(async message => {
+        await vscode.commands.executeCommand(message.command)
+      })
+    }
+  )
+
+  vscode.commands.registerCommand(
+    'serverlessConsole.openWorkspaceSettingsJson',
+    () => {
+      if (!vscode.workspace.rootPath) {
+        return
+      }
+      const editor = new vscode.WorkspaceEdit()
+
+      // set filepath for settings.json
+      const filePath = path.join(
+        vscode.workspace.rootPath,
+        '.vscode',
+        'settings.json'
+      )
+
+      const openPath = vscode.Uri.file(filePath)
+      // create settings.json if it does not exist
+      editor.createFile(openPath, { ignoreIfExists: true })
+      // open workspace settings.json
+      vscode.workspace.applyEdit(editor).then(() => {
+        vscode.workspace.openTextDocument(openPath).then(doc => {
+          vscode.window.showTextDocument(doc)
+        })
+      })
+    }
+  )
+
+  vscode.commands.registerCommand(
     'fnHandlerList.openLogs',
     (treeItem: TreeItem) => {
       const staticJs = 'resources/webview/build/static/js'
@@ -114,8 +240,8 @@ export async function activate(context: vscode.ExtensionContext) {
         })
 
         treeItem.panel.iconPath = {
-          light: vscode.Uri.file(path.join(cwd, 'resources/light/event.svg')),
-          dark: vscode.Uri.file(path.join(cwd, 'resources/dark/event.svg'))
+          light: vscode.Uri.file(path.join(cwd, 'resources/light/logs.svg')),
+          dark: vscode.Uri.file(path.join(cwd, 'resources/dark/logs.svg'))
         }
 
         treeItem.panel.webview.onDidReceiveMessage(
@@ -256,7 +382,7 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   )
 
-  vscode.commands.registerCommand('fnHandlerList.refreshEntry', () => {
+  vscode.commands.registerCommand('serverlessConsole.refreshEntry', () => {
     fnHandlerProvider.refreshAll(getServices())
   })
 
