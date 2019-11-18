@@ -1,8 +1,13 @@
 {
   "name": "serverlessconsole",
+  "publisher": "devadvice",
   "displayName": "Serverless Console",
   "description": "Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/domagojk/serverless-console.git"
+  },
   "engines": {
     "vscode": "^1.38.0"
   },
