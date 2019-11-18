@@ -2,13 +2,13 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode'
 import * as path from 'path'
+import * as AWS from 'aws-sdk'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
 import { getServices, getFontSize } from './settings'
 import { getWebviewContent } from './functionLogsWebview'
 import { TreeItem } from './TreeItem'
-import * as AWS from 'aws-sdk'
-import { readFileSync } from 'fs'
 import { createHelpWebview } from './helpWebview'
+import { helpContent } from './helpContent'
 
 function setAwsConfig(profile: string, region?: string) {
   var credentials = new AWS.SharedIniFileCredentials({
@@ -74,14 +74,8 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand(
     'serverlessConsole.showHelpPage',
     async () => {
-      const content = readFileSync(
-        path.join(__filename, '..', '..', 'src/help.md'),
-        {
-          encoding: 'utf8'
-        }
-      )
       let doc = await vscode.workspace.openTextDocument({
-        content,
+        content: helpContent,
         language: `markdown`
       })
 

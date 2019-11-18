@@ -1,14 +1,14 @@
-# Serverless Console Settings
+export const helpContent = `# Serverless Console Settings
 
 Serverless console gets data from VS Code settings (best if you use [Workspace Settings](serverlessConsole.openWorkspaceSettingsJson)).
 
 ## Serverless Framework
 
-If you are using the Serverless framework, you can add `serverlessFramework` type service.
+If you are using the Serverless framework, you can add \`serverlessFramework\` type service.
 
-It works by executing `serverless print` command and then extracting functions defined in `serverless.yml`:
+It works by executing \`serverless print\` command and then extracting functions defined in \`serverless.yml\`:
 
-```json
+\`\`\`json
 {
   "serverlessConsole.services": [
     {
@@ -21,13 +21,13 @@ It works by executing `serverless print` command and then extracting functions d
     }
   ]
 }
-```
+\`\`\`
 
 ## Custom Service
 
-If you are not using the serverless framework, or want to add custom **CloudWatch logs** in addition to it, you can define them using `custom` type:
+If you are not using the serverless framework, or want to add custom **CloudWatch logs** in addition to it, you can define them using \`custom\` type:
 
-```json
+\`\`\`json
 {
   "serverlessConsole.services": [
     {
@@ -56,4 +56,5 @@ If you are not using the serverless framework, or want to add custom **CloudWatc
     }
   ]
 }
-```
+\`\`\`
+`

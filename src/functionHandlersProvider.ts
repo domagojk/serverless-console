@@ -21,10 +21,15 @@ export class FunctionHandlersProvider
         return [
           new TreeItem(
             {
-              label: 'no services found',
+              label: 'no services found (click for more info)',
               type: 'service'
             },
-            vscode.TreeItemCollapsibleState.None
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'serverlessConsole.showHelpPage',
+              title: 'show help page',
+              arguments: []
+            }
           )
         ]
       }
@@ -40,6 +45,26 @@ export class FunctionHandlersProvider
               service
             },
             vscode.TreeItemCollapsibleState.None
+          )
+        }
+
+        if (
+          service.error &&
+          service.error.includes(
+            'This command can only be run in a Serverless service directory'
+          )
+        ) {
+          return new TreeItem(
+            {
+              label: 'no services found (click for more info)',
+              type: 'service'
+            },
+            vscode.TreeItemCollapsibleState.None,
+            {
+              command: 'serverlessConsole.showHelpPage',
+              title: 'show help page',
+              arguments: []
+            }
           )
         }
 
