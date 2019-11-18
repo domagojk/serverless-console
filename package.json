@@ -1,13 +1,19 @@
 {
   "name": "serverlessconsole",
   "displayName": "Serverless Console",
-  "description": "",
+  "description": "Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.38.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "Serverless",
+    "CloudWatch",
+    "Lambda",
+    "AWS"
   ],
   "activationEvents": [
     "onView:fnHandlerList"
@@ -204,7 +210,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.541.0",
-    "moment": "^2.24.0",
-    "yaml": "^1.7.0"
+    "moment": "2.24.0",
+    "yaml": "1.7.0"
   }
 }

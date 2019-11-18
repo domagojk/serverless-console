@@ -1,20 +1,25 @@
-# Serverless Console README
+# Serverless Console
 
-This is the README for your extension "serverless-console". After writing up a brief description, we recommend including the following sections.
+Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.
+
+![App Preview](./preview.gif)
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+Trying to find logs for Lambda functions in CloudWatch is not an enjoyable experience.
 
-For example if there is an image subfolder under your extension project workspace:
+Some of the issues are:
 
-\!\[feature X\]\(images/feature-x.png\)
+- Finding the log group is not easy and tends to get harder as more functions are deployed.
+- Searching for logs on the wrong stage (for example `dev` instead of `prod`)
+- Constantly matching logged time with the current time
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+This extension solves those issues with following features:
 
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Log groups are grouped per project and correspond to a single Serverless service (even though it's also possible to use it without serverless framework)
+- Stages are shown per function on its own tab
+- Times are shown relative to current timestamp (like "2 minutes ago")
+- START / END of a request is more clear because memory size and duration are formatted differently
 
 ## Extension Settings
 
@@ -24,42 +29,56 @@ For example:
 
 This extension contributes the following settings:
 
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+- `serverlessConsole.services`: a list of services from which data is retrieved.
 
-## Known Issues
+By default, "serverlessFramework" type is used.
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+It works by executing `serverless print` command and then extracting functions defined in `serverless.yml`:
 
-## Release Notes
+```json
+{
+  "serverlessConsole.services": [
+    {
+      "type": "serverlessFramework",
+      "awsProfile": "default",
+      "cwd": "./",
+      "command": "sls print",
+      "timeOffsetInMs": 0,
+      "stages": ["dev"]
+    }
+  ]
+}
+```
 
-Users appreciate release notes as you update your extension.
+If you are not using the serverless framework, or want to add custom **CloudWatch logs** in addition to it, you can define them using `custom` type:
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
------------------------------------------------------------------------------------------------------------
-
-## Working with Markdown
-
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (macOS) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+```json
+{
+  "serverlessConsole.services": [
+    {
+      "type": "custom",
+      "awsProfile": "default",
+      "timeOffsetInMs": 0,
+      "title": "EC2 logs",
+      "region": "us-east-1",
+      "items": [
+        {
+          "title": "PM2 process",
+          "description": "optional desc",
+          "tabs": [
+            {
+              "title": "dev",
+              "logs": "custom_log_group"
+            },
+            {
+              "title": "prod",
+              "logs": "custom_log_group2",
+              "lambda": "custom_function"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
