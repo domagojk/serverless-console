@@ -80,14 +80,17 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
 
             const handlerAbsDir = path.join(service.cwd, handlerRelativeDir)
 
-            const filesInDir = readdirSync(handlerAbsDir)
-            const foundFile = filesInDir.find(fileName => {
-              const nameArr = fileName.split('.')
-              const handlerFileName = handlerArr[handlerArr.length - 1].split(
-                '.'
-              )[0]
-              return nameArr.length === 2 && nameArr[0] === handlerFileName
-            })
+            let foundFile
+            try {
+              const filesInDir = readdirSync(handlerAbsDir)
+              foundFile = filesInDir.find(fileName => {
+                const nameArr = fileName.split('.')
+                const handlerFileName = handlerArr[handlerArr.length - 1].split(
+                  '.'
+                )[0]
+                return nameArr.length === 2 && nameArr[0] === handlerFileName
+              })
+            } catch (err) {}
 
             const httpEvent = yml.functions[fnName].events.find(
               event => event.http
