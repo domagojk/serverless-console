@@ -4,7 +4,7 @@
   "displayName": "Serverless Console",
   "description": "Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.",
   "author": "domagojk (http://github.com/domagojk)",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/domagojk/serverless-console.git"
@@ -26,7 +26,7 @@
   "activationEvents": [
     "onView:fnHandlerList"
   ],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "configuration": {
       "title": "Serverless Console",
@@ -197,7 +197,9 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "webpack --mode production",
+    "webpack": "webpack --mode development",
+    "webpack-dev": "webpack --mode development --watch",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
@@ -212,9 +214,12 @@
     "@types/yaml": "^1.0.2",
     "glob": "^7.1.4",
     "mocha": "^6.1.4",
+    "ts-loader": "^6.2.1",
     "tslint": "^5.12.1",
     "typescript": "^3.3.1",
-    "vscode-test": "^1.2.0"
+    "vscode-test": "^1.2.0",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10"
   },
   "dependencies": {
     "aws-sdk": "^2.541.0",
