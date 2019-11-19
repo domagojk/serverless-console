@@ -2,6 +2,10 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.2.0]
+
+- Added icon
+
 ## [0.1.0]
 
 - Fixed issue with displaying help page
