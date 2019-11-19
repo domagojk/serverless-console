@@ -92,9 +92,10 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
               })
             } catch (err) {}
 
-            const httpEvent = yml.functions[fnName].events.find(
-              event => event.http
-            )
+            const httpEvent =
+            yml.functions[fnName].events && yml.functions[fnName].events.length
+              ? yml.functions[fnName].events.find(event => event.http)
+              : null
 
             return {
               error: null,
