@@ -4,7 +4,7 @@ Serverless console gets data from VS Code settings (best if you use [Workspace S
 
 ## Serverless Framework
 
-If you are using the Serverless framework, you can add `serverlessFramework` type service.
+By default, `serverlessFramework` type is used.
 
 It works by executing `serverless print` command and then extracting functions defined in `serverless.yml`:
 

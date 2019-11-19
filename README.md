@@ -10,7 +10,7 @@ Trying to find logs for Lambda functions in CloudWatch is not an enjoyable exper
 
 Some of the issues are:
 
-- Finding the log group is not easy and tends to get harder as more functions are deployed.
+- Finding the log group is not easy and tends to get harder as more functions are deployed
 - Searching for logs on the wrong stage (for example `dev` instead of `prod`)
 - Constantly matching logged time with the current time
 
@@ -22,10 +22,6 @@ This extension solves those issues with following features:
 - START / END of a request is more clear because memory size and duration are formatted differently
 
 ## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
 
 This extension contributes the following settings:
 
