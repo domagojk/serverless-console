@@ -2,6 +2,8 @@
 
 Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.
 
+**Note: it works only for AWS at the moment**
+
 ![App Preview](./preview.gif)
 
 ## Features
