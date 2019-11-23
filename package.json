@@ -4,7 +4,7 @@
   "displayName": "Serverless Console",
   "description": "Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.",
   "author": "domagojk (http://github.com/domagojk)",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/domagojk/serverless-console.git"
@@ -31,6 +31,12 @@
     "configuration": {
       "title": "Serverless Console",
       "properties": {
+        "serverlessConsole.groupPerRequest": {
+          "type": "boolean",
+          "title": "Group Per Request",
+          "description": "Determines a default option on whether logs should be grouped per request",
+          "default": true
+        },
         "serverlessConsole.services": {
           "type": "array",
           "default": [

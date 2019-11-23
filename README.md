@@ -2,31 +2,26 @@
 
 Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.
 
-**Note: it works only for AWS at the moment**
-
 ![App Preview](./preview.gif)
 
+**Note: it works only for AWS at the moment**
+
 ## Features
-
-Trying to find logs for Lambda functions in CloudWatch is not an enjoyable experience.
-
-Some of the issues are:
-
-- Finding the log group is not easy and tends to get harder as more functions are deployed
-- Searching for logs on the wrong stage (for example `dev` instead of `prod`)
-- Constantly matching logged time with the current time
-
-This extension solves those issues with following features:
 
 - Log groups are grouped per project and correspond to a single Serverless service (even though it's also possible to use it without serverless framework)
 - Stages are shown per function on its own tab
 - Times are shown relative to current timestamp (like "2 minutes ago")
-- START / END of a request is more clear because memory size and duration are formatted differently
+- Logs can be grouped per request
+- Log stream can be searched
+
+![Log per Request and Search](./preview2.gif)
+
 
 ## Extension Settings
 
 This extension contributes the following settings:
 
+- `serverlessConsole.groupPerRequest`: determines a default option on whether logs should be grouped per request.
 - `serverlessConsole.services`: a list of services from which data is retrieved.
 
 By default, "serverlessFramework" type is used.

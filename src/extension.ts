@@ -4,7 +4,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 import * as AWS from 'aws-sdk'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
-import { getServices, getFontSize } from './settings'
+import { getServices, getFontSize, getGroupPerRequest } from './settings'
 import { getWebviewContent } from './functionLogsWebview'
 import { TreeItem } from './TreeItem'
 import { createHelpWebview } from './helpWebview'
@@ -156,6 +156,7 @@ export async function activate(context: vscode.ExtensionContext) {
           ],
           inlineJs: `
             document.vscodeData = {
+              groupPerRequest: ${getGroupPerRequest()},
               tabs: ${JSON.stringify(treeItem.settings.serviceItem.tabs)}
             }
           `
