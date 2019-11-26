@@ -32,7 +32,8 @@ export type ServiceItem = {
 }
 
 export type Service = {
-  type: 'serverlessFramework' | 'custom'
+  type: 'serverlessFramework' | 'custom' | 'cloudformation'
+  stackName?: string
   awsProfile?: string
   region?: string
   isLoading?: boolean

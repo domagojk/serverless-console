@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 import { TreeItem } from './TreeItem'
 import { Service } from './extension'
 import { serverlessFrameworkService } from './serviceGenerators/serverlessFrameworkService'
+import { cloudformationService } from './serviceGenerators/cloudformationService'
 
 export class FunctionHandlersProvider
   implements vscode.TreeDataProvider<TreeItem> {
@@ -124,6 +125,14 @@ export class FunctionHandlersProvider
       services.map(service => {
         if (service.type === 'serverlessFramework') {
           return serverlessFrameworkService(service).then(service => {
+            return {
+              ...service,
+              isLoading: false
+            }
+          })
+        }
+        if (service.type === 'cloudformation') {
+          return cloudformationService(service).then(service => {
             return {
               ...service,
               isLoading: false
