@@ -45,6 +45,7 @@ export async function cloudformationService(
           return {
             ...res,
             title: fnName.replace(`${stack.stackName}-`, ''),
+            region,
             functionName: fnName,
             log: logs.length ? logs[0].Properties.LogGroupName : null
           }
@@ -74,7 +75,9 @@ export async function cloudformationService(
             stages: {
               ...(acc[curr.id]?.stages || {}),
               [stack.stage]: {
-                logs: curr.log
+                logs: curr.log,
+                lambda: curr.functionName,
+                region: curr.region
               }
             }
           }
@@ -104,7 +107,6 @@ export async function cloudformationService(
     }, [])
 
     return {
-      region: 'us-east-1',
       ...service,
       items: functionsArr
         .filter(fn => fn.log)
@@ -118,7 +120,8 @@ export async function cloudformationService(
               return {
                 title: stage,
                 logs: fn.stages[stage].logs,
-                lambda: fn.functionName
+                lambda: fn.stages[stage].lambda,
+                region: fn.stages[stage].region
               }
             })
           }

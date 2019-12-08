@@ -14,6 +14,7 @@ export type ServiceItem = {
     title: string
     logs?: string
     lambda?: string
+    region?: string
   }[]
 }
 

@@ -57,7 +57,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       async message => {
         switch (message.command) {
           case 'getLogStreams': {
-            const AWS = getAwsSdk(service.awsProfile, service.region)
+            const AWS = getAwsSdk(service.awsProfile, message.payload.region || service.region)
             const cloudwatchlogs = new AWS.CloudWatchLogs()
 
             try {
@@ -136,7 +136,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           case 'getLambdaOverview': {
             const AWS = getAwsSdk(
               treeItem.settings.service.awsProfile,
-              treeItem.settings.service.region
+              message.payload.region || treeItem.settings.service.region
             )
             const lambda = new AWS.Lambda()
             try {
