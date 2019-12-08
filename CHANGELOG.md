@@ -2,6 +2,11 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.4.0]
+- "add service" page
+- support for CloudFormation
+- remove service context option
+
 ## [0.3.0]
 - Added "group logs per request" option
 - Added search in a log stream

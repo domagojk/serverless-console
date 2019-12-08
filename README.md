@@ -75,3 +75,6 @@ If you are not using the serverless framework, or want to add custom **CloudWatc
   ]
 }
 ```
+
+# Credits
+Icon made by [turkkub](https://www.flaticon.com/authors/turkkub) from [www.flaticon.com](http://www.flaticon.com/)

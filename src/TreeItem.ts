@@ -37,7 +37,7 @@ export class TreeItem extends vscode.TreeItem {
 
     if (settings.type === 'function') {
       this.command = {
-        command: 'fnHandlerList.openLogs',
+        command: 'serverlessConsole.openLogs',
         title: 'open file',
         arguments: [this]
       }

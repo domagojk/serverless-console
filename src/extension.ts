@@ -1,24 +1,10 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode'
-import * as path from 'path'
-import * as AWS from 'aws-sdk'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
-import { getServices, getFontSize, getGroupPerRequest } from './settings'
-import { getWebviewContent } from './functionLogsWebview'
-import { TreeItem } from './TreeItem'
-import { createHelpWebview } from './helpWebview'
-import { helpContent } from './helpContent'
-
-function setAwsConfig(profile: string, region?: string) {
-  var credentials = new AWS.SharedIniFileCredentials({
-    profile
-  })
-  AWS.config.credentials = credentials
-  if (region) {
-    AWS.config.region = region
-  }
-}
+import { getServices } from './settings'
+import { removeService } from './commands/removeService'
+import { openFunction } from './commands/openFunction'
+import { addService } from './commands/addService'
+import { openLogs } from './commands/openLogs'
 
 export type ServiceItem = {
   title: string
@@ -33,7 +19,12 @@ export type ServiceItem = {
 
 export type Service = {
   type: 'serverlessFramework' | 'custom' | 'cloudformation'
-  stackName?: string
+  hash: string
+  stacks?: {
+    stackName: string
+    stage: string
+    region?: string
+  }[]
   awsProfile?: string
   region?: string
   isLoading?: boolean
@@ -47,8 +38,16 @@ export type Service = {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  if (!vscode.workspace.workspaceFolders) {
+    vscode.window.registerTreeDataProvider(
+      'fnHandlerList',
+      new FunctionHandlersProvider([], true)
+    )
+    return null
+  }
+
   // sls print commands saved in settings
-  const services = getServices()
+  const services = getServices(true)
 
   // Tree Provider instances
   const fnHandlerProvider = new FunctionHandlersProvider(services)
@@ -56,16 +55,16 @@ export async function activate(context: vscode.ExtensionContext) {
   // register tree data providers
   vscode.window.registerTreeDataProvider('fnHandlerList', fnHandlerProvider)
 
-  fnHandlerProvider.refreshAll(services)
+  fnHandlerProvider.refreshServices(services, { refreshAll: true })
 
   vscode.commands.registerCommand(
     'serverlessConsole.openFunction',
-    async (treeItem: TreeItem) => {
-      if (treeItem.uri) {
-        let doc = await vscode.workspace.openTextDocument(treeItem.uri)
-        await vscode.window.showTextDocument(doc, { preview: false })
-      }
-    }
+    openFunction
+  )
+
+  vscode.commands.registerCommand(
+    'serverlessConsole.removeService',
+    removeService
   )
 
   vscode.commands.registerCommand('fnHandlerList.showError', error => {
@@ -73,241 +72,25 @@ export async function activate(context: vscode.ExtensionContext) {
   })
 
   vscode.commands.registerCommand(
-    'serverlessConsole.showHelpPage',
-    async () => {
-      let doc = await vscode.workspace.openTextDocument({
-        content: helpContent,
-        language: `markdown`
-      })
-
-      let html = (await vscode.commands.executeCommand(
-        'markdown.api.render',
-        doc.getText()
-      )) as string
-
-      createHelpWebview({
-        cwd: context.extensionPath,
-        html
-      })
-    }
+    'serverlessConsole.addService',
+    addService(context)
   )
 
   vscode.commands.registerCommand(
-    'serverlessConsole.openWorkspaceSettingsJson',
-    () => {
-      if (!vscode.workspace.rootPath) {
-        return
-      }
-      const editor = new vscode.WorkspaceEdit()
-
-      // set filepath for settings.json
-      const filePath = path.join(
-        vscode.workspace.rootPath,
-        '.vscode',
-        'settings.json'
-      )
-
-      const openPath = vscode.Uri.file(filePath)
-      // create settings.json if it does not exist
-      editor.createFile(openPath, { ignoreIfExists: true })
-      // open workspace settings.json
-      vscode.workspace.applyEdit(editor).then(() => {
-        vscode.workspace.openTextDocument(openPath).then(doc => {
-          vscode.window.showTextDocument(doc)
-        })
-      })
-    }
-  )
-
-  vscode.commands.registerCommand(
-    'fnHandlerList.openLogs',
-    (treeItem: TreeItem) => {
-      const staticJs = 'resources/webview/build/static/js'
-      const staticCss = 'resources/webview/build/static/css'
-      const cwd = context.extensionPath
-      const service = treeItem.settings.service
-
-      const localResourceRoot = vscode.Uri.file(
-        path.join(cwd, 'resources/webview')
-      )
-
-      if (!treeItem.panel) {
-        treeItem.panel = vscode.window.createWebviewPanel(
-          'slsConsoleLogs',
-          `${treeItem.label}`,
-          vscode.ViewColumn.One,
-          {
-            retainContextWhenHidden: true,
-            enableScripts: true,
-            localResourceRoots: [localResourceRoot]
-          }
-        )
-
-        getWebviewContent({
-          panel: treeItem.panel,
-          fontSize: getFontSize(),
-          jsFiles: [
-            vscode.Uri.file(path.join(cwd, staticJs, 'main1.js')),
-            vscode.Uri.file(path.join(cwd, staticJs, 'main2.js')),
-            vscode.Uri.file(path.join(cwd, staticJs, 'main3.js'))
-          ],
-          cssFiles: [
-            vscode.Uri.file(path.join(cwd, staticCss, 'main1.css')),
-            vscode.Uri.file(path.join(cwd, staticCss, 'main2.css'))
-          ],
-          inlineJs: `
-            document.vscodeData = {
-              groupPerRequest: ${getGroupPerRequest()},
-              tabs: ${JSON.stringify(treeItem.settings.serviceItem.tabs)}
-            }
-          `
-        })
-
-        treeItem.panel.iconPath = {
-          light: vscode.Uri.file(path.join(cwd, 'resources/light/logs.svg')),
-          dark: vscode.Uri.file(path.join(cwd, 'resources/dark/logs.svg'))
-        }
-
-        treeItem.panel.webview.onDidReceiveMessage(
-          async message => {
-            switch (message.command) {
-              case 'getLogStreams': {
-                setAwsConfig(service.awsProfile, service.region)
-                const cloudwatchlogs = new AWS.CloudWatchLogs()
-
-                try {
-                  const logStreams = await cloudwatchlogs
-                    .describeLogStreams({
-                      orderBy: 'LastEventTime',
-                      nextToken: message.payload.nextToken,
-                      descending: true,
-                      logGroupName: message.payload.logGroupName
-                    })
-                    .promise()
-
-                  treeItem.panel.webview.postMessage({
-                    messageId: message.messageId,
-                    payload: {
-                      nextToken: logStreams.nextToken,
-                      logStreams: logStreams.logStreams.map(logStream => {
-                        const timestamp =
-                          logStream.lastEventTimestamp || logStream.creationTime
-
-                        return {
-                          ...logStream,
-                          sortByTimestamp: service.timeOffsetInMs
-                            ? timestamp + service.timeOffsetInMs
-                            : timestamp
-                        }
-                      })
-                    }
-                  })
-                } catch (err) {
-                  treeItem.panel.webview.postMessage({
-                    messageId: message.messageId,
-                    payload: {
-                      error:
-                        err && err.message
-                          ? err.message
-                          : 'error retriving log streams'
-                    }
-                  })
-                }
-                break
-              }
-              case 'getLogEvents':
-                {
-                  setAwsConfig(
-                    treeItem.settings.service.awsProfile,
-                    treeItem.settings.service.region
-                  )
-                  const cloudwatchlogs = new AWS.CloudWatchLogs()
-                  const log = await cloudwatchlogs
-                    .getLogEvents({
-                      nextToken: message.payload.nextToken,
-                      logGroupName: message.payload.logGroup,
-                      logStreamName: message.payload.logStream
-                    })
-                    .promise()
-
-                  treeItem.panel.webview.postMessage({
-                    messageId: message.messageId,
-                    payload: {
-                      functionName: treeItem.label,
-                      logEvents: log.events.map(log => {
-                        return {
-                          ...log,
-                          timestamp: service.timeOffsetInMs
-                            ? log.timestamp + service.timeOffsetInMs
-                            : log.timestamp
-                        }
-                      }),
-                      nextBackwardToken: log.nextBackwardToken,
-                      nextForwardToken: log.nextForwardToken
-                    }
-                  })
-                }
-                break
-              case 'getLambdaOverview': {
-                setAwsConfig(
-                  treeItem.settings.service.awsProfile,
-                  treeItem.settings.service.region
-                )
-                const lambda = new AWS.Lambda()
-                try {
-                  const lambdaOverview = await lambda
-                    .getFunction({
-                      FunctionName: message.payload.fnName
-                    })
-                    .promise()
-
-                  treeItem.panel.webview.postMessage({
-                    messageId: message.messageId,
-                    payload: {
-                      codeSize: lambdaOverview.Configuration.CodeSize,
-                      lastModified: lambdaOverview.Configuration.LastModified,
-                      memorySize: lambdaOverview.Configuration.MemorySize,
-                      runtime: lambdaOverview.Configuration.Runtime,
-                      timeout: lambdaOverview.Configuration.Timeout
-                    }
-                  })
-                } catch (err) {
-                  treeItem.panel.webview.postMessage({
-                    messageId: message.messageId,
-                    payload: {
-                      error:
-                        err && err.message
-                          ? err.message
-                          : 'error retriving function overview'
-                    }
-                  })
-                }
-                break
-              }
-            }
-          },
-          undefined,
-          context.subscriptions
-        )
-
-        treeItem.panel.onDidDispose(() => {
-          delete treeItem.panel
-        })
-      }
-      treeItem.panel.reveal()
-    }
+    'serverlessConsole.openLogs',
+    openLogs(context)
   )
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('serverlessConsole.services')) {
-        fnHandlerProvider.refreshAll(getServices())
+        fnHandlerProvider.refreshServices(getServices())
       }
     })
   )
 
   vscode.commands.registerCommand('serverlessConsole.refreshEntry', () => {
-    fnHandlerProvider.refreshAll(getServices())
+    fnHandlerProvider.refreshServices(getServices(), { refreshAll: true })
   })
 
   // debug lambda archived

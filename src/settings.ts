@@ -1,26 +1,68 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import { Service } from './extension'
+import { existsSync } from 'fs'
+import { createHash } from 'crypto'
 
-export function getServices(): Service[] {
-  const services =
-    vscode.workspace.getConfiguration().get('serverlessConsole.services') ||
-    ([] as any)
+export function getServices(initial?: boolean): Service[] {
+  let services: any[] = vscode.workspace
+    .getConfiguration()
+    .get('serverlessConsole.services')
+
+  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.path
+
+  if (
+    initial &&
+    !services &&
+    existsSync(path.join(workspaceDir, 'serverless.yml'))
+  ) {
+    services = [
+      {
+        type: 'serverlessFramework',
+        awsProfile: 'default',
+        cwd: './',
+        command: 'serverless print',
+        timeOffsetInMs: 0,
+        stages: ['dev']
+      }
+    ]
+    vscode.workspace
+      .getConfiguration()
+      .update('serverlessConsole.services', services)
+  }
+  if (!services) {
+    services = []
+  }
 
   return services.map(conf => {
+    delete conf.hash
+    const hash = getServiceHash(conf)
+
     if (conf.type === 'serverlessFramework') {
       return {
         ...conf,
-        cwd: path.join(vscode.workspace.workspaceFolders[0].uri.path, conf.cwd)
+        hash,
+        cwd: path.join(workspaceDir, conf.cwd)
       }
     } else {
-      return conf
+      return {
+        ...conf,
+        hash
+      }
     }
   })
 }
 
+export function getServiceHash(service) {
+  return createHash('md5')
+    .update(JSON.stringify(service))
+    .digest('hex')
+}
+
 export function getGroupPerRequest(): Boolean {
-  return vscode.workspace.getConfiguration().get('serverlessConsole.groupPerRequest')
+  return vscode.workspace
+    .getConfiguration()
+    .get('serverlessConsole.groupPerRequest')
 }
 
 export function getFontSize(): number {

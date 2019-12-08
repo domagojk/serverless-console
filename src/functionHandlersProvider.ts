@@ -10,7 +10,7 @@ export class FunctionHandlersProvider
   readonly onDidChangeTreeData: vscode.Event<TreeItem | null> = this
     ._onDidChangeTreeData.event
 
-  constructor(public services: Service[] = []) {}
+  constructor(public services: Service[] = [], public noFolder?: boolean) {}
 
   getTreeItem(element: TreeItem): vscode.TreeItem {
     return element
@@ -18,16 +18,28 @@ export class FunctionHandlersProvider
 
   async getChildren(element?: TreeItem): Promise<TreeItem[]> {
     if (!element) {
+      if (this.noFolder) {
+        return [
+          new TreeItem(
+            {
+              label: 'You have not yet opened a folder.',
+              type: 'service'
+            },
+            vscode.TreeItemCollapsibleState.None
+          )
+        ]
+      }
+
       if (this.services.length === 0) {
         return [
           new TreeItem(
             {
-              label: 'no services found (click for more info)',
+              label: 'Click to add a service...',
               type: 'service'
             },
             vscode.TreeItemCollapsibleState.None,
             {
-              command: 'serverlessConsole.showHelpPage',
+              command: 'serverlessConsole.addService',
               title: 'show help page',
               arguments: []
             }
@@ -38,34 +50,12 @@ export class FunctionHandlersProvider
         if (service.isLoading) {
           return new TreeItem(
             {
-              label: service.command
-                ? `running "${service.command}"...`
-                : service.title,
+              label: service.title || `executing "${service.command}"...`,
               icon: 'loading',
               type: 'service',
               service
             },
-            vscode.TreeItemCollapsibleState.None
-          )
-        }
-
-        if (
-          service.error &&
-          service.error.includes(
-            'This command can only be run in a Serverless service directory'
-          )
-        ) {
-          return new TreeItem(
-            {
-              label: 'no services found (click for more info)',
-              type: 'service'
-            },
-            vscode.TreeItemCollapsibleState.None,
-            {
-              command: 'serverlessConsole.showHelpPage',
-              title: 'show help page',
-              arguments: []
-            }
+            vscode.TreeItemCollapsibleState.Expanded
           )
         }
 
@@ -97,7 +87,7 @@ export class FunctionHandlersProvider
         )
       })
     } else if (element.settings.type === 'service') {
-      return element.settings.service.items.map(item => {
+      return element.settings.service.items?.map(item => {
         return new TreeItem(
           {
             ...element.settings,
@@ -113,38 +103,56 @@ export class FunctionHandlersProvider
     }
   }
 
-  refreshAll(services: Service[]) {
-    this.services
-      .filter(({ type }) => type !== 'custom')
-      .forEach(service => {
-        service.isLoading = true
-      })
+  refreshServices(services: Service[], options?: { refreshAll?: boolean }) {
+    this.services = services.map(newService => {
+      // adding "isLoading" to all services that have changed
+      // or if "refreshAll" is used, all services are refresh no matter if the hash changed
+      const oldService = this.services.find(s => s.hash === newService.hash)
+
+      if (options?.refreshAll || !oldService) {
+        return {
+          ...newService,
+          isLoading: true
+        }
+      } else {
+        return oldService
+      }
+    })
     this._onDidChangeTreeData.fire()
 
-    Promise.all(
-      services.map(service => {
-        if (service.type === 'serverlessFramework') {
-          return serverlessFrameworkService(service).then(service => {
-            return {
-              ...service,
-              isLoading: false
-            }
-          })
-        }
-        if (service.type === 'cloudformation') {
-          return cloudformationService(service).then(service => {
-            return {
-              ...service,
-              isLoading: false
-            }
-          })
-        }
+    // looping trough all "isLoading" services and applying appropriate handler
+    // when handler is done, service is updated (mutated this.services by finding the hash)
+    return Promise.all(
+      this.services
+        .filter(s => s.isLoading)
+        .map(service => {
+          const handler =
+            service.type === 'serverlessFramework'
+              ? serverlessFrameworkService
+              : service.type === 'cloudformation'
+              ? cloudformationService
+              : null
 
-        return Promise.resolve(service)
-      })
-    ).then((servicesResolved: any) => {
-      this.services = servicesResolved
-      this._onDidChangeTreeData.fire()
+          if (handler) {
+            return handler(service).then(updatedService => {
+              this.mutateServiceByHash({
+                ...updatedService,
+                isLoading: false
+              })
+            })
+          }
+        })
+    )
+  }
+
+  mutateServiceByHash(service: Service) {
+    this.services = this.services.map(s => {
+      if (s.hash === service.hash) {
+        return service
+      } else {
+        return s
+      }
     })
+    this._onDidChangeTreeData.fire()
   }
 }

@@ -4,7 +4,7 @@
   "displayName": "Serverless Console",
   "description": "Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.",
   "author": "domagojk (http://github.com/domagojk)",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/domagojk/serverless-console.git"
@@ -39,18 +39,7 @@
         },
         "serverlessConsole.services": {
           "type": "array",
-          "default": [
-            {
-              "type": "serverlessFramework",
-              "awsProfile": "default",
-              "cwd": "./",
-              "command": "sls print",
-              "timeOffsetInMs": 0,
-              "stages": [
-                "dev"
-              ]
-            }
-          ],
+          "default": null,
           "items": {
             "type": "object",
             "properties": {
@@ -151,16 +140,16 @@
         }
       },
       {
-        "command": "serverlessConsole.showHelpPage",
+        "command": "serverlessConsole.addService",
         "title": "Add Service",
         "icon": {
-          "light": "resources/light/view.svg",
-          "dark": "resources/dark/view.svg"
+          "light": "resources/light/add.svg",
+          "dark": "resources/dark/add.svg"
         }
       },
       {
-        "command": "serverlessConsole.openWorkspaceSettingsJson",
-        "title": "Open Workspace Settings JSON"
+        "command": "serverlessConsole.removeService",
+        "title": "Remove"
       }
     ],
     "viewsContainers": {
@@ -188,12 +177,16 @@
           "group": "navigation"
         },
         {
-          "command": "serverlessConsole.showHelpPage",
+          "command": "serverlessConsole.addService",
           "when": "view == fnHandlerList",
-          "group": "2_moreActions"
+          "group": "navigation"
         }
       ],
       "view/item/context": [
+        {
+          "command": "serverlessConsole.removeService",
+          "when": "view == fnHandlerList && viewItem == service"
+        },
         {
           "command": "serverlessConsole.openFunction",
           "when": "view == fnHandlerList && viewItem == function-localRef",
@@ -222,7 +215,7 @@
     "mocha": "^6.1.4",
     "ts-loader": "^6.2.1",
     "tslint": "^5.12.1",
-    "typescript": "^3.3.1",
+    "typescript": "^3.7.2",
     "vscode-test": "^1.2.0",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10"
@@ -231,5 +224,11 @@
     "aws-sdk": "^2.541.0",
     "moment": "2.24.0",
     "yaml": "1.7.0"
+  },
+  "prettier": {
+    "tabWidth": 2,
+    "useTabs": false,
+    "semi": false,
+    "singleQuote": true
   }
 }
