@@ -4,22 +4,31 @@ import { getFontSize, getServiceHash } from '../settings'
 import { getWebviewContent } from '../functionLogsWebview'
 import { getAwsSdk } from '../getAwsSdk'
 
+let panel: vscode.WebviewPanel = null
+
 export const addService = (context: vscode.ExtensionContext) => async () => {
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const cwd = context.extensionPath
   const localResourceRoot = vscode.Uri.file(join(cwd, 'resources/webview'))
 
-  const panel = vscode.window.createWebviewPanel(
-    'addServicePage',
-    `Add Service`,
-    vscode.ViewColumn.One,
-    {
-      retainContextWhenHidden: true,
-      enableScripts: true,
-      localResourceRoots: [localResourceRoot]
-    }
-  )
+  if (panel) {
+    panel.reveal()
+  } else {
+    panel = vscode.window.createWebviewPanel(
+      'addServicePage',
+      `Add Service`,
+      vscode.ViewColumn.One,
+      {
+        retainContextWhenHidden: true,
+        enableScripts: true,
+        localResourceRoots: [localResourceRoot]
+      }
+    )
+  }
+  panel.onDidDispose(() => {
+    panel = null
+  })
 
   getWebviewContent({
     panel,

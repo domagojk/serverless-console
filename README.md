@@ -16,6 +16,11 @@ Serverless Console enables you to show function overview and logs from within th
 
 ![Log per Request and Search](./preview2.gif)
 
+## Support for Serverless Framework or CloudFormation
+
+Data for serverless functions can be retrieved by parsing `serverless.yml` definition or from a CloudFormation stack (especially useful if you are using **AWS SAM**).
+
+![Add service page](./preview-addservice.png)
 
 ## Extension Settings
 
@@ -43,7 +48,7 @@ It works by executing `serverless print` command and then extracting functions d
 }
 ```
 
-If you are not using the serverless framework, or want to add custom **CloudWatch logs** in addition to it, you can define them using `custom` type:
+If you want to add custom **CloudWatch logs**, you can define them using `custom` type:
 
 ```json
 {
