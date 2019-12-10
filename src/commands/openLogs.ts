@@ -2,7 +2,12 @@ import * as vscode from 'vscode'
 import { TreeItem } from '../TreeItem'
 import { join } from 'path'
 import { getWebviewContent } from '../functionLogsWebview'
-import { getFontSize, getGroupPerRequest } from '../settings'
+import {
+  getFontSize,
+  getGroupPerRequest,
+  getAutoRefreshInterval,
+  setAutoRefreshInterval
+} from '../settings'
 import { getAwsSdk } from '../getAwsSdk'
 
 export const openLogs = (context: vscode.ExtensionContext) => async (
@@ -43,6 +48,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
         document.vscodeData = {
           page: 'logs',
           groupPerRequest: ${getGroupPerRequest()},
+          autoRefreshInterval: ${getAutoRefreshInterval()},
           tabs: ${JSON.stringify(treeItem.settings.serviceItem.tabs)}
         }
       `
@@ -53,16 +59,41 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       dark: vscode.Uri.file(join(cwd, 'resources/dark/logs.svg'))
     }
 
+    const autoRefreshEnabledVal = getAutoRefreshInterval() || 5000
+
     treeItem.panel.webview.onDidReceiveMessage(
       async message => {
         switch (message.command) {
+          case 'setAutoRefresh': {
+            const newVal = message.payload.enabled ? autoRefreshEnabledVal : 0
+            setAutoRefreshInterval(newVal)
+            treeItem.panel.webview.postMessage({
+              messageId: message.messageId,
+              payload: {
+                autoRefreshInterval: newVal
+              }
+            })
+          }
           case 'getLogStreams': {
-            const AWS = getAwsSdk(service.awsProfile, message.payload.region || service.region)
+            if (!treeItem.panel.visible) {
+              treeItem.panel.webview.postMessage({
+                messageId: message.messageId,
+                payload: {
+                  ignore: true
+                }
+              })
+              return null
+            }
+            const AWS = getAwsSdk(
+              service.awsProfile,
+              message.payload.region || service.region
+            )
             const cloudwatchlogs = new AWS.CloudWatchLogs()
 
             try {
               const logStreams = await cloudwatchlogs
                 .describeLogStreams({
+                  limit: message.payload.limit,
                   orderBy: 'LastEventTime',
                   nextToken: message.payload.nextToken,
                   descending: true,

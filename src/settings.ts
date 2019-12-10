@@ -65,6 +65,18 @@ export function getGroupPerRequest(): Boolean {
     .get('serverlessConsole.groupPerRequest')
 }
 
+export function getAutoRefreshInterval(): number {
+  return vscode.workspace
+    .getConfiguration()
+    .get('serverlessConsole.autoRefreshInterval')
+}
+
+export function setAutoRefreshInterval(interval: number) {
+  return vscode.workspace
+    .getConfiguration()
+    .update('serverlessConsole.autoRefreshInterval', interval)
+}
+
 export function getFontSize(): number {
   return vscode.workspace.getConfiguration(null, null).get('editor.fontSize')
 }

@@ -26,7 +26,7 @@
   "activationEvents": [
     "onView:fnHandlerList"
   ],
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "configuration": {
       "title": "Serverless Console",
@@ -36,6 +36,11 @@
           "title": "Group Per Request",
           "description": "Determines a default option on whether logs should be grouped per request",
           "default": true
+        },
+        "serverlessConsole.autoRefreshInterval": {
+          "type": "number",
+          "title": "Auto Refresh Interval",
+          "default": 0
         },
         "serverlessConsole.services": {
           "type": "array",
