@@ -133,6 +133,16 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           }
           case 'getLogEvents':
             {
+              if (!treeItem.panel.visible) {
+                treeItem.panel.webview.postMessage({
+                  messageId: message.messageId,
+                  payload: {
+                    ignore: true
+                  }
+                })
+                return null
+              }
+              
               const AWS = getAwsSdk(
                 treeItem.settings.service.awsProfile,
                 treeItem.settings.service.region

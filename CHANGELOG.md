@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.4.1]
+- Auto refresh option
+
 ## [0.4.0]
 - "add service" page
 - support for CloudFormation
