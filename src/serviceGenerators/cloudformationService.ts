@@ -147,7 +147,11 @@ export async function cloudformationService(
         .filter(fn => fn.log)
         .map(fn => {
           return {
-            title: fn.title,
+            title:
+              fn.title !== 'LambdaFunction' &&
+              fn.title.endsWith('LambdaFunction')
+                ? fn.title.replace(/LambdaFunction$/, '')
+                : fn.title,
             description: fn.method,
             tabs: Object.keys(fn.stages).map(stage => {
               return {
