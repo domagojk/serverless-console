@@ -62,7 +62,9 @@ export class FunctionHandlersProvider
         if (service.error) {
           return new TreeItem(
             {
-              label: `error running "${service.command}"`,
+              label: service.command
+                ? `error running "${service.command}"`
+                : service.title,
               type: 'service',
               icon: 'error',
               service
