@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.4.2]
+- Fixed CloudFormation source created with AWS SAM
+
 ## [0.4.1]
 - Auto refresh option
 

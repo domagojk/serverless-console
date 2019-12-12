@@ -1,5 +1,6 @@
 import { Service } from '../extension'
 import { getAwsSdk } from '../getAwsSdk'
+import * as YAML from 'yaml'
 
 export async function cloudformationService(
   service: Service
@@ -16,64 +17,37 @@ export async function cloudformationService(
         region
       })
 
-      const template = await cloudformation
-        .getTemplate({
+      const resources = await cloudformation
+        .describeStackResources({
           StackName: stack.stackName
         })
         .promise()
 
-      const parsed = JSON.parse(template.TemplateBody)
-      const resourcesObj = parsed.Resources
-      const resourcesArr = Object.keys(resourcesObj).reduce((acc, curr) => {
-        return [
-          ...acc,
-          {
-            id: curr,
-            ...resourcesObj[curr]
-          }
-        ]
-      }, [])
-
-      const functions = resourcesArr
-        .filter(i => i.Type === 'AWS::Lambda::Function')
+      const functions = resources.StackResources.filter(
+        r => r.ResourceType === 'AWS::Lambda::Function'
+      )
+        .filter(
+          r =>
+            r.LogicalResourceId !==
+            'CustomDashresourceDashapigwDashcwDashroleLambdaFunction'
+        )
         .map(res => {
-          const logs = res.DependsOn.reduce((acc, resourceId) => {
-            return [...acc, resourcesObj[resourceId]]
-          }, []).filter(i => i.Type === 'AWS::Logs::LogGroup')
-
-          const fnName = res.Properties.FunctionName
           return {
             ...res,
-            title: fnName.replace(`${stack.stackName}-`, ''),
+            title: res.LogicalResourceId,
             region,
-            functionName: fnName,
-            log: logs.length ? logs[0].Properties.LogGroupName : null
+            functionName: res.PhysicalResourceId,
+            log: `/aws/lambda/${res.PhysicalResourceId}`
           }
-        })
-
-      const methods = resourcesArr
-        .filter(i => i.Type === 'AWS::ApiGateway::Method')
-        .map(res => {
-          const resId = res.Properties?.ResourceId?.Ref
-          const resource = resourcesObj[resId]
-          const pathPart = resource?.Properties?.PathPart
-
-          if (pathPart) {
-            return {
-              ...res,
-              pathPart
-            }
-          }
-          return res
         })
 
       functionsAllStages = functions.reduce((acc, curr) => {
         return {
           ...acc,
-          [curr.id]: {
+          [curr.LogicalResourceId]: {
             ...curr,
             stages: {
-              ...(acc[curr.id]?.stages || {}),
+              ...(acc[curr.LogicalResourceId]?.stages || {}),
               [stack.stage]: {
                 logs: curr.log,
                 lambda: curr.functionName,
@@ -84,22 +58,83 @@ export async function cloudformationService(
         }
       }, functionsAllStages)
 
-      methods.forEach(method => {
-        const uri = method.Properties?.Integration?.Uri
-        const joined = uri && uri['Fn::Join'] ? uri['Fn::Join'].flat() : []
+      try {
+        // parsing template to get method details
+        // (can fail)
 
-        const lambdaIndex = joined.findIndex(i => {
-          return typeof i === 'string' && i.startsWith(':lambda:')
+        const template = await cloudformation
+          .getTemplate({
+            TemplateStage: 'Original',
+            StackName: stack.stackName
+          })
+          .promise()
+
+        const parsed = YAML.parse(template.TemplateBody)
+        const resources = parsed.Resources
+
+        // trying to parse SAM template
+        Object.keys(resources).forEach(resId => {
+          if (functionsAllStages[resId]) {
+            const resEvents = resources[resId]?.Properties?.Events
+            if (resEvents) {
+              Object.keys(resEvents).forEach(key => {
+                const props = resEvents[key]?.Properties
+                if (props?.Method) {
+                  const description = `${props?.Method?.toUpperCase()} ${
+                    props?.Path
+                  }`
+                  functionsAllStages[resId].method = description
+                }
+              })
+            }
+          }
         })
 
-        const lambdaFn = joined[lambdaIndex + 1]
-          ? joined[lambdaIndex + 1]['Fn::GetAtt'][0]
-          : null
+        // trying to parse cloudformation JSON
+        const resourcesArr = Object.keys(resources).reduce((acc, curr) => {
+          return [
+            ...acc,
+            {
+              id: curr,
+              ...resources[curr]
+            }
+          ]
+        }, [])
 
-        if (functionsAllStages[lambdaFn]) {
-          functionsAllStages[lambdaFn].method = method
-        }
-      })
+        const methods = resourcesArr
+          .filter(i => i.Type === 'AWS::ApiGateway::Method')
+          .map(res => {
+            const resId = res.Properties?.ResourceId?.Ref
+            const resource = resources[resId]
+            const pathPart = resource?.Properties?.PathPart
+
+            if (pathPart) {
+              return {
+                ...res,
+                pathPart
+              }
+            }
+            return res
+          })
+
+        methods.forEach(method => {
+          const uri = method.Properties?.Integration?.Uri
+          const uriResolved = uri?.['Fn::Join']?.flat() || []
+
+          const lambdaIndex = uriResolved.findIndex(i => {
+            return typeof i === 'string' && i.startsWith(':lambda:')
+          })
+
+          const lambdaFn = uriResolved?.[lambdaIndex + 1]?.['Fn::GetAtt']?.[0]
+
+          if (lambdaFn && functionsAllStages[lambdaFn]) {
+            const desc = `${method.Properties.HttpMethod} /${method.pathPart}`
+            functionsAllStages[lambdaFn].method = desc
+          }
+        })
+      } catch (err) {
+        // ignore errors
+      }
     }
 
     const functionsArr = Object.keys(functionsAllStages).reduce((acc, curr) => {
@@ -113,9 +148,7 @@ export async function cloudformationService(
         .map(fn => {
           return {
             title: fn.title,
-            description: fn.method
-              ? `${fn.method.Properties.HttpMethod} /${fn.method.pathPart}`
-              : '',
+            description: fn.method,
             tabs: Object.keys(fn.stages).map(stage => {
               return {
                 title: stage,
