@@ -135,6 +135,27 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
           }
         })
       }
+    } else if (message.command === 'describeLogGroups') {
+      const AWS = getAwsSdk(message.payload.awsProfile, message.payload.region)
+      const cloudWatch = new AWS.CloudWatchLogs()
+
+      try {
+        const res = await cloudWatch.describeLogGroups().promise()
+
+        panel.webview.postMessage({
+          messageId: message.messageId,
+          payload: {
+            logGroups: res.logGroups.map(l => l.logGroupName)
+          }
+        })
+      } catch (err) {
+        panel.webview.postMessage({
+          messageId: message.messageId,
+          payload: {
+            error: err.message
+          }
+        })
+      }
     }
   })
 }
