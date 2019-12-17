@@ -80,6 +80,13 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
                 }
               })
             }
+          : message.payload.source === 'custom'
+          ? {
+              type: 'custom',
+              title: message.payload.title,
+              timeOffsetInMs: message.payload.offset * 60000,
+              items: message.payload.items
+            }
           : null
 
       const hash = getServiceHash(newServiceData)

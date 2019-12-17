@@ -142,10 +142,10 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 })
                 return null
               }
-              
+
               const AWS = getAwsSdk(
                 treeItem.settings.service.awsProfile,
-                treeItem.settings.service.region
+                message.payload.region || treeItem.settings.service.region
               )
               const cloudwatchlogs = new AWS.CloudWatchLogs()
               const log = await cloudwatchlogs

@@ -114,7 +114,7 @@ export class FunctionHandlersProvider
       if (options?.refreshAll || !oldService) {
         return {
           ...newService,
-          isLoading: true
+          isLoading: newService.type === 'custom' ? false : true
         }
       } else {
         return oldService

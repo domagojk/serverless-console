@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.4.3]
+- Added "Custom" source when adding a new service
+
 ## [0.4.2]
 - Fixed CloudFormation source created with AWS SAM
 
