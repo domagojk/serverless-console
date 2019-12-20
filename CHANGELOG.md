@@ -2,6 +2,10 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.4.5]
+- Optimised "sls print" output
+- Display service error in its own tab rather than vscode notification dialog
+
 ## [0.4.3]
 - Added "Custom" source when adding a new service
 

@@ -152,10 +152,11 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
         stderr = err.message
 
         if (stderr.includes('ENOENT')) {
-          stderr += `\nENOENT error sometimes occur when command is not found.\n\n
+          stderr += `\n\n\nENOENT error sometimes occur when command is not found.
             Make sure "${commandArr[0]}" can be executed in "${service.cwd}"
           `
         }
+        child.kill()
       }
     })
 
