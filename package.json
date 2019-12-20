@@ -26,7 +26,7 @@
   "activationEvents": [
     "onView:fnHandlerList"
   ],
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "configuration": {
       "title": "Serverless Console",

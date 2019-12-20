@@ -49,18 +49,10 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
 
     let stdout = ''
     let outputJson = null
-    child.stdout.setEncoding('utf8')
-    child.stdout.on('data', chunk => {
-      stdout += chunk
-      try {
-        outputJson = YAML.parse(stdout)
-      } catch (err) {
-        outputJson = null
-      }
-    })
-
-    child.stdout.on('end', () => {
-      if (outputJson && outputJson.service) {
+    let stdOutEndCalled = false
+    const onStdOutEnd = () => {
+      if (stdOutEndCalled === false && outputJson && outputJson.service) {
+        stdOutEndCalled = true
         const yml: ServerlessYML = {
           ...outputJson,
           provider: {
@@ -129,7 +121,29 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
         })
         child.kill()
       }
+    }
+
+    child.stdout.setEncoding('utf8')
+
+    let chunkTimeout
+    child.stdout.on('data', chunk => {
+      stdout += chunk
+      try {
+        outputJson = YAML.parse(stdout)
+      } catch (err) {
+        outputJson = null
+      }
+      if (outputJson) {
+        // if chunk can be parsed, wait 1 sec of possible next chunk
+        // if there is none, the process is probably done
+        // this is done because somethimes waiting for stdout.on('end')
+        // takes too long
+        clearTimeout(chunkTimeout)
+        chunkTimeout = setTimeout(onStdOutEnd, 1000)
+      }
     })
+
+    child.stdout.on('end', onStdOutEnd)
 
     let stderr = ''
     child.stderr.setEncoding('utf8')
