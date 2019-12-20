@@ -146,6 +146,19 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
     child.stdout.on('end', onStdOutEnd)
 
     let stderr = ''
+
+    child.on('error', err => {
+      if (!stderr) {
+        stderr = err.message
+
+        if (stderr.includes('ENOENT')) {
+          stderr += `\nENOENT error sometimes occur when command is not found.\n\n
+            Make sure "${commandArr[0]}" can be executed in "${service.cwd}"
+          `
+        }
+      }
+    })
+
     child.stderr.setEncoding('utf8')
     child.stderr.on('data', chunk => {
       stderr += chunk

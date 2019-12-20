@@ -68,8 +68,26 @@ export async function activate(context: vscode.ExtensionContext) {
     removeService
   )
 
-  vscode.commands.registerCommand('fnHandlerList.showError', error => {
-    vscode.window.showErrorMessage(error)
+  let webviewErroPanel: vscode.WebviewPanel = null
+
+  vscode.commands.registerCommand('fnHandlerList.showError', async error => {
+    if (!webviewErroPanel) {
+      webviewErroPanel = vscode.window.createWebviewPanel(
+        'slsConsole-error',
+        `Error Output`,
+        vscode.ViewColumn.One,
+        {
+          enableScripts: false
+        }
+      )
+    }
+    let withNewLine = error.replace(/\n/g, '<br>')
+    webviewErroPanel.webview.html = `<p style="font-family: monospace; padding:10px">${withNewLine}</p>`
+    webviewErroPanel.reveal()
+
+    webviewErroPanel.onDidDispose(() => {
+      webviewErroPanel = null
+    })
   })
 
   vscode.commands.registerCommand(
