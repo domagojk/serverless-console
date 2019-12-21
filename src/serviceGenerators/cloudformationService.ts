@@ -17,13 +17,28 @@ export async function cloudformationService(
         region
       })
 
-      const resources = await cloudformation
-        .describeStackResources({
-          StackName: stack.stackName
-        })
-        .promise()
+      const listAllResources = async (currentResources: AWS.CloudFormation.StackResourceSummaries, stackName: string, nextToken?: string) => {
+        const resources = await cloudformation
+          .listStackResources({
+            StackName: stack.stackName,
+            NextToken: nextToken
+          })
+          .promise()
 
-      const functions = resources.StackResources.filter(
+        const merged = [
+          ...currentResources,
+          ...resources.StackResourceSummaries
+        ]
+        if (resources.NextToken) {
+          return listAllResources(merged, stackName, resources.NextToken)
+        } else {
+          return merged
+        }
+      }
+      
+      const r = await listAllResources([], stack.stackName)
+
+      const functions = r.filter(
         r => r.ResourceType === 'AWS::Lambda::Function'
       )
         .filter(
