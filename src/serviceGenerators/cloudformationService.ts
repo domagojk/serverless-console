@@ -17,11 +17,13 @@ export async function cloudformationService(
         region
       })
 
+      let runs = 0
       const listAllResources = async (
         currentResources: AWS.CloudFormation.StackResourceSummaries,
         stackName: string,
         nextToken?: string
       ) => {
+        runs++
         const resources = await cloudformation
           .listStackResources({
             StackName: stack.stackName,
@@ -33,7 +35,7 @@ export async function cloudformationService(
           ...currentResources,
           ...resources.StackResourceSummaries
         ]
-        if (resources.NextToken) {
+        if (resources.NextToken && runs < 5) {
           return listAllResources(merged, stackName, resources.NextToken)
         } else {
           return merged
