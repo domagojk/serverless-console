@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.4.6]
+- Fixed bug with listing partial results from Cloudformation
+
 ## [0.4.5]
 - Optimised "sls print" output
 - Display service error in its own tab rather than vscode notification dialog

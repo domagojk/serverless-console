@@ -17,7 +17,11 @@ export async function cloudformationService(
         region
       })
 
-      const listAllResources = async (currentResources: AWS.CloudFormation.StackResourceSummaries, stackName: string, nextToken?: string) => {
+      const listAllResources = async (
+        currentResources: AWS.CloudFormation.StackResourceSummaries,
+        stackName: string,
+        nextToken?: string
+      ) => {
         const resources = await cloudformation
           .listStackResources({
             StackName: stack.stackName,
@@ -35,12 +39,11 @@ export async function cloudformationService(
           return merged
         }
       }
-      
-      const r = await listAllResources([], stack.stackName)
 
-      const functions = r.filter(
-        r => r.ResourceType === 'AWS::Lambda::Function'
-      )
+      const resources = await listAllResources([], stack.stackName)
+
+      const functions = resources
+        .filter(r => r.ResourceType === 'AWS::Lambda::Function')
         .filter(
           r =>
             r.LogicalResourceId !==
