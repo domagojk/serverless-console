@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="70" height="70">
+
+ <g>
+  <title>background</title>
+  <rect fill="none" id="canvas_background" height="402" width="582" y="-1" x="-1"/>
+ </g>
+ <g>
+  <title>Layer 1</title>
+  <g id="svg_1">
+   <g id="svg_2">
+    <g id="svg_3">
+     <rect id="svg_4" height="6.084" width="53.008" fill="#90BE3E" y="56.474" x="9.813"/>
+    </g>
+   </g>
+   <g id="svg_5">
+    <g id="svg_6">
+     <rect id="svg_7" height="28.41" width="11.422" fill="#90BE3E" y="23.563" x="11.816"/>
+    </g>
+   </g>
+   <g id="svg_8">
+    <g id="svg_9">
+     <rect id="svg_10" height="44.762" width="11.844" fill="#90BE3E" y="7.211" x="29.85"/>
+    </g>
+   </g>
+   <g id="svg_11">
+    <g id="svg_12">
+     <rect id="svg_13" height="20.398" width="11.844" fill="#90BE3E" y="31.576" x="47.038"/>
+    </g>
+   </g>
+  </g>
+ </g>
+</svg>
