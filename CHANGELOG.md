@@ -2,6 +2,10 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.4.9]
+- Fixed [issue #2](https://github.com/domagojk/serverless-console/issues/2)
+- Added function icons
+
 ## [0.4.6]
 - Fixed bug with listing partial results from Cloudformation
 

@@ -54,9 +54,11 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       `
     })
 
-    treeItem.panel.iconPath = {
-      light: vscode.Uri.file(join(cwd, 'resources/light/logs.svg')),
-      dark: vscode.Uri.file(join(cwd, 'resources/dark/logs.svg'))
+    if (treeItem.iconPathObj) {
+      treeItem.panel.iconPath = {
+        light: vscode.Uri.file(treeItem.iconPathObj.light),
+        dark: vscode.Uri.file(treeItem.iconPathObj.dark)
+      }
     }
 
     const autoRefreshEnabledVal = getAutoRefreshInterval() || 5000
