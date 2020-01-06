@@ -53,11 +53,17 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
     const onStdOutEnd = () => {
       if (stdOutEndCalled === false && outputJson && outputJson.service) {
         stdOutEndCalled = true
-        const yml: ServerlessYML = {
+        let yml: ServerlessYML = {
           ...outputJson,
           provider: {
             ...serverlessDefaults.provider,
             ...outputJson.provider
+          }
+        }
+
+        if (typeof yml.service === 'string') {
+          yml.service = {
+            name: yml.service
           }
         }
 
