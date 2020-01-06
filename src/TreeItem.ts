@@ -5,9 +5,14 @@ import * as path from 'path'
 export class TreeItem extends vscode.TreeItem {
   uri: vscode.Uri
   public panel: vscode.WebviewPanel
+  public iconPathObj: {
+    dark: string
+    light: string
+  }
 
   constructor(
     public readonly settings: {
+      extensionPath: string
       type: string
       label: string
       icon?: string
@@ -25,13 +30,13 @@ export class TreeItem extends vscode.TreeItem {
     if (settings.type === 'service') {
       switch (settings.icon) {
         case 'error':
-          this.iconPath = getImgPath('error')
+          this.iconPathObj = getImgPath(settings.extensionPath, 'error')
           break
         case 'loading':
-          this.iconPath = getImgPath('loading')
+          this.iconPathObj = getImgPath(settings.extensionPath, 'loading')
           break
         default:
-          this.iconPath = null
+          this.iconPathObj = null
       }
     }
 
@@ -46,6 +51,14 @@ export class TreeItem extends vscode.TreeItem {
         this.uri = settings.localSrc
         this.contextValue = 'function-localRef'
       }
+
+      if (settings.serviceItem.tabs.find(t => t.lambda)) {
+        this.iconPathObj = getImgPath(settings.extensionPath, 'lambda')
+      } else if (settings.serviceItem.tabs.find(t => t.logs)) {
+        this.iconPathObj = getImgPath(settings.extensionPath, 'cloudwatch')
+      }
+
+      this.iconPath = this.iconPathObj
     }
   }
 
@@ -56,9 +69,9 @@ export class TreeItem extends vscode.TreeItem {
   }
 }
 
-function getImgPath(name: string) {
+function getImgPath(extesionPath: string, name: string) {
   return {
-    dark: path.join(__filename, '..', '..', `resources/dark/${name}.svg`),
-    light: path.join(__filename, '..', '..', `resources/light/${name}.svg`)
+    dark: path.join(extesionPath, `resources/dark/${name}.svg`),
+    light: path.join(extesionPath, `resources/light/${name}.svg`)
   }
 }

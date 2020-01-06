@@ -9,8 +9,23 @@ export class FunctionHandlersProvider
   private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | null> = new vscode.EventEmitter<TreeItem | null>()
   readonly onDidChangeTreeData: vscode.Event<TreeItem | null> = this
     ._onDidChangeTreeData.event
+  noFolder: boolean
+  services: Service[]
+  extensionPath: string
 
-  constructor(public services: Service[] = [], public noFolder?: boolean) {}
+  constructor({
+    services = [],
+    noFolder,
+    extensionPath
+  }: {
+    services: Service[]
+    noFolder?: boolean
+    extensionPath: string
+  }) {
+    this.services = services
+    this.noFolder = noFolder
+    this.extensionPath = extensionPath
+  }
 
   getTreeItem(element: TreeItem): vscode.TreeItem {
     return element
@@ -22,6 +37,7 @@ export class FunctionHandlersProvider
         return [
           new TreeItem(
             {
+              extensionPath: this.extensionPath,
               label: 'You have not yet opened a folder.',
               type: 'service'
             },
@@ -34,6 +50,7 @@ export class FunctionHandlersProvider
         return [
           new TreeItem(
             {
+              extensionPath: this.extensionPath,
               label: 'Click to add a service...',
               type: 'service'
             },
@@ -50,6 +67,7 @@ export class FunctionHandlersProvider
         if (service.isLoading) {
           return new TreeItem(
             {
+              extensionPath: this.extensionPath,
               label: service.title || `executing "${service.command}"...`,
               icon: 'loading',
               type: 'service',
@@ -62,6 +80,7 @@ export class FunctionHandlersProvider
         if (service.error) {
           return new TreeItem(
             {
+              extensionPath: this.extensionPath,
               label: service.command
                 ? `error running "${service.command}"`
                 : service.title,
@@ -80,6 +99,7 @@ export class FunctionHandlersProvider
 
         return new TreeItem(
           {
+            extensionPath: this.extensionPath,
             label: service.title,
             icon: null,
             type: 'service',
@@ -92,6 +112,7 @@ export class FunctionHandlersProvider
       return element.settings.service.items?.map(item => {
         return new TreeItem(
           {
+            extensionPath: this.extensionPath,
             ...element.settings,
             label: item.title,
             type: 'function',

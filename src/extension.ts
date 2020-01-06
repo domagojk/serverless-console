@@ -42,7 +42,11 @@ export async function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
     vscode.window.registerTreeDataProvider(
       'fnHandlerList',
-      new FunctionHandlersProvider([], true)
+      new FunctionHandlersProvider({
+        services: [],
+        noFolder: true,
+        extensionPath: context.extensionPath
+      })
     )
     return null
   }
@@ -51,7 +55,10 @@ export async function activate(context: vscode.ExtensionContext) {
   const services = getServices(true)
 
   // Tree Provider instances
-  const fnHandlerProvider = new FunctionHandlersProvider(services)
+  const fnHandlerProvider = new FunctionHandlersProvider({
+    services,
+    extensionPath: context.extensionPath
+  })
 
   // register tree data providers
   vscode.window.registerTreeDataProvider('fnHandlerList', fnHandlerProvider)
