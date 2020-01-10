@@ -4,6 +4,26 @@ import { Service } from './extension'
 import { existsSync } from 'fs'
 import { createHash } from 'crypto'
 
+export function prepareService(conf) {
+  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.path
+
+  delete conf.hash
+  const hash = getServiceHash(conf)
+
+  if (conf.type === 'serverlessFramework') {
+    return {
+      ...conf,
+      hash,
+      cwd: path.join(workspaceDir, conf.cwd)
+    }
+  } else {
+    return {
+      ...conf,
+      hash
+    }
+  }
+}
+
 export function getServices(initial?: boolean): Service[] {
   let services: any[] = vscode.workspace
     .getConfiguration()
@@ -34,23 +54,7 @@ export function getServices(initial?: boolean): Service[] {
     services = []
   }
 
-  return services.map(conf => {
-    delete conf.hash
-    const hash = getServiceHash(conf)
-
-    if (conf.type === 'serverlessFramework') {
-      return {
-        ...conf,
-        hash,
-        cwd: path.join(workspaceDir, conf.cwd)
-      }
-    } else {
-      return {
-        ...conf,
-        hash
-      }
-    }
-  })
+  return services.map(prepareService)
 }
 
 export function getServiceHash(service) {

@@ -15,10 +15,12 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
 ) => {
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
-  const cwd = context.extensionPath
+  const extesionPath = context.extensionPath
   const service = treeItem.settings.service
 
-  const localResourceRoot = vscode.Uri.file(join(cwd, 'resources/webview'))
+  const localResourceRoot = vscode.Uri.file(
+    join(extesionPath, 'resources/webview')
+  )
 
   if (!treeItem.panel) {
     treeItem.panel = vscode.window.createWebviewPanel(
@@ -36,13 +38,13 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       panel: treeItem.panel,
       fontSize: getFontSize(),
       jsFiles: [
-        vscode.Uri.file(join(cwd, staticJs, 'main1.js')),
-        vscode.Uri.file(join(cwd, staticJs, 'main2.js')),
-        vscode.Uri.file(join(cwd, staticJs, 'main3.js'))
+        vscode.Uri.file(join(extesionPath, staticJs, 'main1.js')),
+        vscode.Uri.file(join(extesionPath, staticJs, 'main2.js')),
+        vscode.Uri.file(join(extesionPath, staticJs, 'main3.js'))
       ],
       cssFiles: [
-        vscode.Uri.file(join(cwd, staticCss, 'main1.css')),
-        vscode.Uri.file(join(cwd, staticCss, 'main2.css'))
+        vscode.Uri.file(join(extesionPath, staticCss, 'main1.css')),
+        vscode.Uri.file(join(extesionPath, staticCss, 'main2.css'))
       ],
       inlineJs: `
         document.vscodeData = {
@@ -54,9 +56,11 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       `
     })
 
-    treeItem.panel.iconPath = {
-      light: vscode.Uri.file(join(cwd, 'resources/light/logs.svg')),
-      dark: vscode.Uri.file(join(cwd, 'resources/dark/logs.svg'))
+    if (treeItem.iconPathObj) {
+      treeItem.panel.iconPath = {
+        light: vscode.Uri.file(treeItem.iconPathObj.light),
+        dark: vscode.Uri.file(treeItem.iconPathObj.dark)
+      }
     }
 
     const autoRefreshEnabledVal = getAutoRefreshInterval() || 5000
@@ -67,16 +71,17 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           case 'setAutoRefresh': {
             const newVal = message.payload.enabled ? autoRefreshEnabledVal : 0
             setAutoRefreshInterval(newVal)
-            treeItem.panel.webview.postMessage({
+            treeItem.panel?.webview?.postMessage({
               messageId: message.messageId,
               payload: {
                 autoRefreshInterval: newVal
               }
             })
+            break
           }
           case 'getLogStreams': {
             if (!treeItem.panel.visible) {
-              treeItem.panel.webview.postMessage({
+              treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
                 payload: {
                   ignore: true
@@ -101,7 +106,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 })
                 .promise()
 
-              treeItem.panel.webview.postMessage({
+              treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
                 payload: {
                   nextToken: logStreams.nextToken,
@@ -119,7 +124,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 }
               })
             } catch (err) {
-              treeItem.panel.webview.postMessage({
+              treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
                 payload: {
                   error:
@@ -134,7 +139,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           case 'getLogEvents':
             {
               if (!treeItem.panel.visible) {
-                treeItem.panel.webview.postMessage({
+                treeItem.panel?.webview?.postMessage({
                   messageId: message.messageId,
                   payload: {
                     ignore: true
@@ -148,30 +153,43 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 message.payload.region || treeItem.settings.service.region
               )
               const cloudwatchlogs = new AWS.CloudWatchLogs()
-              const log = await cloudwatchlogs
-                .getLogEvents({
-                  nextToken: message.payload.nextToken,
-                  logGroupName: message.payload.logGroup,
-                  logStreamName: message.payload.logStream
-                })
-                .promise()
 
-              treeItem.panel.webview.postMessage({
-                messageId: message.messageId,
-                payload: {
-                  functionName: treeItem.label,
-                  logEvents: log.events.map(log => {
-                    return {
-                      ...log,
-                      timestamp: service.timeOffsetInMs
-                        ? log.timestamp + service.timeOffsetInMs
-                        : log.timestamp
-                    }
-                  }),
-                  nextBackwardToken: log.nextBackwardToken,
-                  nextForwardToken: log.nextForwardToken
-                }
-              })
+              try {
+                const log = await cloudwatchlogs
+                  .getLogEvents({
+                    nextToken: message.payload.nextToken,
+                    logGroupName: message.payload.logGroup,
+                    logStreamName: message.payload.logStream
+                  })
+                  .promise()
+
+                treeItem.panel?.webview?.postMessage({
+                  messageId: message.messageId,
+                  payload: {
+                    functionName: treeItem.label,
+                    logEvents: log.events.map(log => {
+                      return {
+                        ...log,
+                        timestamp: service.timeOffsetInMs
+                          ? log.timestamp + service.timeOffsetInMs
+                          : log.timestamp
+                      }
+                    }),
+                    nextBackwardToken: log.nextBackwardToken,
+                    nextForwardToken: log.nextForwardToken
+                  }
+                })
+              } catch (err) {
+                treeItem.panel?.webview?.postMessage({
+                  messageId: message.messageId,
+                  payload: {
+                    error:
+                      err && err.message
+                        ? err.message
+                        : 'error retriving log events'
+                  }
+                })
+              }
             }
             break
           case 'getLambdaOverview': {
@@ -187,7 +205,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 })
                 .promise()
 
-              treeItem.panel.webview.postMessage({
+              treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
                 payload: {
                   codeSize: lambdaOverview.Configuration.CodeSize,
@@ -198,7 +216,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 }
               })
             } catch (err) {
-              treeItem.panel.webview.postMessage({
+              treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
                 payload: {
                   error:
@@ -206,6 +224,102 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                       ? err.message
                       : 'error retriving function overview'
                 }
+              })
+            }
+            break
+          }
+          case 'startQuery': {
+            const AWS = getAwsSdk(
+              service.awsProfile,
+              message.payload.region || service.region
+            )
+            const cloudwatchlogs = new AWS.CloudWatchLogs()
+
+            try {
+              const { queryId } = await cloudwatchlogs
+                .startQuery({
+                  startTime: message.payload.startTime,
+                  endTime: message.payload.endTime,
+                  queryString: message.payload.query,
+                  logGroupName: message.payload.logGroupName
+                })
+                .promise()
+
+              treeItem.panel?.webview?.postMessage({
+                messageId: message.messageId,
+                stream: true,
+                payload: {
+                  ref: message.payload.ref,
+                  queryId
+                }
+              })
+            } catch (err) {
+              console.log(err)
+              treeItem.panel?.webview?.postMessage({
+                messageId: message.messageId,
+                payload: {
+                  error:
+                    err && err.message ? err.message : 'error querying logs'
+                }
+              })
+            }
+            break
+          }
+          case 'getQueryResults': {
+            const AWS = getAwsSdk(
+              service.awsProfile,
+              message.payload.region || service.region
+            )
+            const cloudwatchlogs = new AWS.CloudWatchLogs()
+
+            try {
+              const res = await cloudwatchlogs
+                .getQueryResults({
+                  queryId: message.payload.queryId
+                })
+                .promise()
+
+              treeItem.panel?.webview?.postMessage({
+                messageId: message.messageId,
+                payload: {
+                  ...res,
+                  ref: message.payload.ref
+                }
+              })
+            } catch (err) {
+              console.log(err)
+              treeItem.panel?.webview?.postMessage({
+                messageId: message.messageId,
+                payload: {
+                  error:
+                    err && err.message ? err.message : 'error querying logs'
+                }
+              })
+            }
+            break
+          }
+          case 'stopQuery': {
+            const AWS = getAwsSdk(
+              service.awsProfile,
+              message.payload.region || service.region
+            )
+            const cloudwatchlogs = new AWS.CloudWatchLogs()
+
+            try {
+              await cloudwatchlogs
+                .stopQuery({
+                  queryId: message.payload.queryId
+                })
+                .promise()
+
+              treeItem.panel?.webview?.postMessage({
+                messageId: message.messageId,
+                payload: {}
+              })
+            } catch (err) {
+              treeItem.panel?.webview?.postMessage({
+                messageId: message.messageId,
+                payload: {}
               })
             }
             break

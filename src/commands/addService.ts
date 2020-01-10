@@ -1,8 +1,10 @@
 import * as vscode from 'vscode'
 import { join } from 'path'
-import { getFontSize, getServiceHash } from '../settings'
+import { getFontSize, getServiceHash, prepareService } from '../settings'
 import { getWebviewContent } from '../functionLogsWebview'
 import { getAwsSdk } from '../getAwsSdk'
+import { serverlessFrameworkService } from '../serviceGenerators/serverlessFrameworkService'
+import { cloudformationService } from '../serviceGenerators/cloudformationService'
 
 let panel: vscode.WebviewPanel = null
 
@@ -85,9 +87,38 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
               type: 'custom',
               title: message.payload.title,
               timeOffsetInMs: message.payload.offset * 60000,
+              awsProfile: message.payload.awsProfile,
               items: message.payload.items
             }
           : null
+
+
+      const handler =
+        newServiceData.type === 'serverlessFramework'
+          ? serverlessFrameworkService
+          : newServiceData.type === 'cloudformation'
+          ? cloudformationService
+          : null
+
+      if (handler) {
+        const { error } = await handler(prepareService(newServiceData)).catch(
+          err => {
+            return {
+              error:
+                err && err.message ? err.message : 'error connecting to service'
+            }
+          }
+        )
+
+        if (error) {
+          return panel.webview.postMessage({
+            messageId: message.messageId,
+            payload: {
+              error
+            }
+          })
+        }
+      }
 
       const hash = getServiceHash(newServiceData)
 

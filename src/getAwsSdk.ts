@@ -1,6 +1,6 @@
 import * as AWS from 'aws-sdk'
 
-export function getAwsSdk(profile: string, region?: string) {
+export function getAwsSdk(profile = 'default', region?: string) {
   var credentials = new AWS.SharedIniFileCredentials({
     profile
   })

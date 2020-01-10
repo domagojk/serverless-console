@@ -57,9 +57,9 @@ export class TreeItem extends vscode.TreeItem {
       } else if (settings.serviceItem.tabs.find(t => t.logs)) {
         this.iconPathObj = getImgPath(settings.extensionPath, 'cloudwatch')
       }
-
-      this.iconPath = this.iconPathObj
     }
+
+    this.iconPath = this.iconPathObj
   }
 
   get description(): string {
