@@ -1,6 +1,6 @@
 # Serverless Console
 
-Serverless Console is an alternative UI for AWS focused on serverless services.
+Serverless Console is an alternative UI for AWS focused on "serverless" services.
 
 ## Cloudwatch Logs
 
