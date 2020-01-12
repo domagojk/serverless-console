@@ -1,6 +1,6 @@
 # Serverless Console
 
-Serverless Console is an alternative UI for AWS focused on "serverless" services.
+Serverless Console is an alternative UI for AWS Cloudwatch (focused on "serverless" development).
 
 ## Cloudwatch Logs
 
@@ -11,6 +11,7 @@ Serverless Console is an alternative UI for AWS focused on "serverless" services
 - Times are shown relative to current timestamp (like "2 minutes ago")
 - Logs can be grouped per request
 - Log stream can be searched
+- Can be used for custom log groups (doesn't have to be for AWS Lambda)
 
 ## Log Search (Cloudwatch Insights)
 
@@ -20,11 +21,11 @@ Serverless Console is an alternative UI for AWS focused on "serverless" services
 - Preserves search history (while the tab is opened)
 
 
-## Supported Services for Serverless Framework or CloudFormation
+## Supported Services
 
-- Serverless Framework - data is retrieved by parsing `serverless.yml` definition
-- CloudFormation stack - data is retrieved using AWS API (especially useful if you are using **AWS SAM**)
-- Custom Logs - exact Log Group name is defined in settings (doesn't have to be for AWS Lambda)
+- **Serverless Framework** - data is retrieved by parsing `serverless.yml` definition
+- **CloudFormation stack** - data is retrieved using AWS API (especially useful if you are using **AWS SAM**)
+- **Custom Logs** - exact Log Group name is defined in settings
 
 ## Extension Settings
 
