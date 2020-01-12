@@ -1,6 +1,6 @@
 # Serverless Console
 
-Serverless Console is an alternative UI for AWS Cloudwatch (focused on "serverless" development).
+Serverless Console is an alternative UI for AWS Cloudwatch. Its focus is on "serverless functions" but it can also be used for any kind of log group.
 
 ## Cloudwatch Logs
 
@@ -11,7 +11,6 @@ Serverless Console is an alternative UI for AWS Cloudwatch (focused on "serverle
 - Times are shown relative to current timestamp (like "2 minutes ago")
 - Logs can be grouped per request
 - Log stream can be searched
-- Can be used for custom log groups (doesn't have to be for AWS Lambda)
 
 ## Log Search (Cloudwatch Insights)
 
@@ -19,7 +18,6 @@ Serverless Console is an alternative UI for AWS Cloudwatch (focused on "serverle
 
 - [Cloudwatch Insights query](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html) for simple search is used by default (but it can be modified)
 - Preserves search history (while the tab is opened)
-
 
 ## Supported Services
 
