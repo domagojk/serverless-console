@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.5.0]
+- Added "Search Logs" using Cloudwatch Insights
+
 ## [0.4.9]
 - Fixed [issue #2](https://github.com/domagojk/serverless-console/issues/2)
 - Added function icons
