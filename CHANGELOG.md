@@ -2,6 +2,10 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.5.2]
+- AWS profile file parser added (for displaying a dropdown)
+- Find widget enabled for logs
+
 ## [0.5.0]
 - Added "Search Logs" using Cloudwatch Insights
 

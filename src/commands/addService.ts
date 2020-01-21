@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import { join } from 'path'
+import { loadSharedConfigFiles } from '@aws-sdk/shared-ini-file-loader'
 import { getFontSize, getServiceHash, prepareService } from '../settings'
 import { getWebviewContent } from '../functionLogsWebview'
 import { getAwsSdk } from '../getAwsSdk'
@@ -31,6 +32,9 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
   panel.onDidDispose(() => {
     panel = null
   })
+  const profiles = await loadSharedConfigFiles()
+    .then(res => Object.keys(res.credentialsFile))
+    .catch(err => [])
 
   getWebviewContent({
     panel,
@@ -46,7 +50,8 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
     ],
     inlineJs: `
           document.vscodeData = {
-            page: 'createService'
+            page: 'createService',
+            profiles: ${JSON.stringify(profiles)}
           }
         `
   })
@@ -91,7 +96,6 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
               items: message.payload.items
             }
           : null
-
 
       const handler =
         newServiceData.type === 'serverlessFramework'

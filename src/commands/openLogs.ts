@@ -6,7 +6,8 @@ import {
   getFontSize,
   getGroupPerRequest,
   getAutoRefreshInterval,
-  setAutoRefreshInterval
+  setAutoRefreshInterval,
+  getFontFamily
 } from '../settings'
 import { getAwsSdk } from '../getAwsSdk'
 
@@ -28,6 +29,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       `${treeItem.label}`,
       vscode.ViewColumn.One,
       {
+        enableFindWidget: true,
         retainContextWhenHidden: true,
         enableScripts: true,
         localResourceRoots: [localResourceRoot]
@@ -51,6 +53,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           page: 'logs',
           groupPerRequest: ${getGroupPerRequest()},
           autoRefreshInterval: ${getAutoRefreshInterval()},
+          fontSize: "${getFontSize()}",
+          fontFamily: "${getFontFamily()}",
           tabs: ${JSON.stringify(treeItem.settings.serviceItem.tabs)}
         }
       `

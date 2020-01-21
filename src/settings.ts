@@ -84,3 +84,7 @@ export function setAutoRefreshInterval(interval: number) {
 export function getFontSize(): number {
   return vscode.workspace.getConfiguration(null, null).get('editor.fontSize')
 }
+
+export function getFontFamily(): number {
+  return vscode.workspace.getConfiguration(null, null).get('editor.fontFamily')
+}
