@@ -57,6 +57,12 @@ export class TreeItem extends vscode.TreeItem {
       } else if (settings.serviceItem.tabs.find(t => t.logs)) {
         this.iconPathObj = getImgPath(settings.extensionPath, 'cloudwatch')
       }
+    } else if (settings.type === 'dynamodb') {
+      this.command = {
+        command: 'serverlessConsole.openDynamoDb',
+        title: 'open table',
+        arguments: [this]
+      }
     }
 
     this.iconPath = this.iconPathObj

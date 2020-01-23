@@ -5,6 +5,7 @@ import { removeService } from './commands/removeService'
 import { openFunction } from './commands/openFunction'
 import { addService } from './commands/addService'
 import { openLogs } from './commands/openLogs'
+import { openDynamoDb } from './commands/openDynamoDb'
 
 export type ServiceItem = {
   title: string
@@ -19,7 +20,7 @@ export type ServiceItem = {
 }
 
 export type Service = {
-  type: 'serverlessFramework' | 'custom' | 'cloudformation'
+  type: 'serverlessFramework' | 'custom' | 'cloudformation' | 'dynamodb'
   hash: string
   stacks?: {
     stackName: string
@@ -105,6 +106,11 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.registerCommand(
     'serverlessConsole.openLogs',
     openLogs(context)
+  )
+
+  vscode.commands.registerCommand(
+    'serverlessConsole.openDynamoDb',
+    openDynamoDb(context)
   )
 
   context.subscriptions.push(

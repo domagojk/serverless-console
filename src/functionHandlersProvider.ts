@@ -3,6 +3,7 @@ import { TreeItem } from './TreeItem'
 import { Service } from './extension'
 import { serverlessFrameworkService } from './serviceGenerators/serverlessFrameworkService'
 import { cloudformationService } from './serviceGenerators/cloudformationService'
+import { dynamoDbService } from './serviceGenerators/dynamodbService'
 
 export class FunctionHandlersProvider
   implements vscode.TreeDataProvider<TreeItem> {
@@ -115,7 +116,10 @@ export class FunctionHandlersProvider
             extensionPath: this.extensionPath,
             ...element.settings,
             label: item.title,
-            type: 'function',
+            type:
+              element.settings.service.type === 'dynamodb'
+                ? 'dynamodb'
+                : 'function',
             localSrc: item.uri,
             description: item.description,
             serviceItem: item
@@ -154,6 +158,8 @@ export class FunctionHandlersProvider
               ? serverlessFrameworkService
               : service.type === 'cloudformation'
               ? cloudformationService
+              : service.type === 'dynamodb'
+              ? dynamoDbService
               : null
 
           if (handler) {
