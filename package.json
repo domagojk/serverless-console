@@ -2,7 +2,7 @@
   "name": "serverlessconsole",
   "publisher": "devadvice",
   "displayName": "Serverless Console",
-  "description": "Serverless Console enables you to show function overview and logs from within the Visual Studio Code editor.",
+  "description": "Serverless Console is an alternative UI for AWS CloudWatch, focused on \"serverless development\"",
   "author": "domagojk (http://github.com/domagojk)",
   "version": "0.5.2",
   "repository": {
@@ -26,7 +26,7 @@
   "activationEvents": [
     "onView:fnHandlerList"
   ],
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "configuration": {
       "title": "Serverless Console",
