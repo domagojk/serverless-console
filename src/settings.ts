@@ -5,7 +5,7 @@ import { existsSync } from 'fs'
 import { createHash } from 'crypto'
 
 export function prepareService(conf) {
-  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.path
+  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.fsPath
 
   delete conf.hash
   const hash = getServiceHash(conf)

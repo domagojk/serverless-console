@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { spawn } from 'cross-spawn'
 import * as vscode from 'vscode'
 import * as YAML from 'yaml'
 import * as path from 'path'

@@ -228,6 +228,7 @@
   "dependencies": {
     "@aws-sdk/shared-ini-file-loader": "0.1.0-preview.1",
     "aws-sdk": "^2.541.0",
+    "cross-spawn": "^7.0.1",
     "moment": "2.24.0",
     "yaml": "1.7.0"
   },
