@@ -75,6 +75,17 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           })
         }
 
+        if (Array.isArray(yml.functions)) {
+          let functionsArr = yml.functions
+          yml.functions = {}
+          functionsArr.forEach(fun => {
+            yml.functions = {
+              ...yml.functions,
+              ...fun
+            }
+          })
+        }
+
         resolve({
           ...service,
           title: service.title || yml.service.name,
