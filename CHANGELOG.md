@@ -3,10 +3,10 @@
 All notable changes to the "serverless-console" extension will be documented in this file.
 
 ## [0.5.5]
-- Fix [issue #5](https://github.com/domagojk/serverless-console/issues/5)
+- Fixed issue #5
 
 ## [0.5.4]
-- Fix [issue #4](https://github.com/domagojk/serverless-console/issues/4)
+- Fixed issue #4
 
 ## [0.5.2]
 - AWS profile file parser added (for displaying a dropdown)
@@ -16,7 +16,7 @@ All notable changes to the "serverless-console" extension will be documented in 
 - Added "Search Logs" using Cloudwatch Insights
 
 ## [0.4.9]
-- Fixed [issue #2](https://github.com/domagojk/serverless-console/issues/2)
+- Fixed issue #2
 - Added function icons
 
 ## [0.4.6]
