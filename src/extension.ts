@@ -34,6 +34,7 @@ export type Service = {
   cwd?: string
   command?: string
   stages?: string[]
+  envVars?: { key: string; value: string }[]
   timeOffsetInMs?: number
   items?: ServiceItem[]
 }
@@ -52,7 +53,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // sls print commands saved in settings
-  const services = getServices(true)
+  const services = getServices()
 
   // Tree Provider instances
   const fnHandlerProvider = new FunctionHandlersProvider({

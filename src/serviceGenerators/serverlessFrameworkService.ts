@@ -43,9 +43,24 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
     // and yet after 5+ seconds, stderr returned "socket hang up" error
 
     const commandArr = service.command.split(' ')
-    const child = spawn(commandArr[0], commandArr.slice(1), {
-      cwd: service.cwd
-    })
+
+    const child =
+      service.envVars && service.envVars.length
+        ? spawn(commandArr[0], commandArr.slice(1), {
+            cwd: service.cwd,
+            env: {
+              ...process.env,
+              ...service.envVars.reduce((acc, curr) => {
+                return {
+                  ...acc,
+                  [curr.key]: curr.value
+                }
+              }, {})
+            }
+          })
+        : spawn(commandArr[0], commandArr.slice(1), {
+            cwd: service.cwd
+          })
 
     let stdout = ''
     let outputJson = null
@@ -137,6 +152,9 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           })
         })
         child.kill()
+      } else if (outputJson) {
+        stdout = String(outputJson)
+        outputJson = null
       }
     }
 

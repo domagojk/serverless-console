@@ -24,32 +24,11 @@ export function prepareService(conf) {
   }
 }
 
-export function getServices(initial?: boolean): Service[] {
+export function getServices(): Service[] {
   let services: any[] = vscode.workspace
     .getConfiguration()
     .get('serverlessConsole.services')
 
-  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.path
-
-  if (
-    initial &&
-    !services &&
-    existsSync(path.join(workspaceDir, 'serverless.yml'))
-  ) {
-    services = [
-      {
-        type: 'serverlessFramework',
-        awsProfile: 'default',
-        cwd: './',
-        command: 'serverless print',
-        timeOffsetInMs: 0,
-        stages: ['dev']
-      }
-    ]
-    vscode.workspace
-      .getConfiguration()
-      .update('serverlessConsole.services', services)
-  }
   if (!services) {
     services = []
   }

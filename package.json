@@ -4,7 +4,7 @@
   "displayName": "Serverless Console",
   "description": "Serverless Console is an alternative UI for AWS CloudWatch, focused on \"serverless development\"",
   "author": "domagojk (http://github.com/domagojk)",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "repository": {
     "type": "git",
     "url": "https://github.com/domagojk/serverless-console.git"
@@ -86,6 +86,20 @@
               "title": {
                 "type": "string"
               },
+              "envVars": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },          
               "items": {
                 "type": "array",
                 "items": {

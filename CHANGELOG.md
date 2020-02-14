@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.5.6]
+- Added support for enviroment variables
+
 ## [0.5.5]
 - Fixed issue #5
 

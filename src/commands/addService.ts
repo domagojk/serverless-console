@@ -71,6 +71,7 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
               cwd: message.payload.cwd,
               command: message.payload.print,
               timeOffsetInMs: message.payload.offset * 60000,
+              envVars: message.payload.envVars,
               stages: message.payload.stages
             }
           : message.payload.source === 'cloudformation'
