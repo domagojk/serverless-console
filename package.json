@@ -155,6 +155,15 @@
       {
         "command": "serverlessConsole.removeService",
         "title": "Remove"
+      },
+      {
+        "command": "serverlessConsole.update-dynamodb-item",
+        "title": "Update DynamoDB item",
+        "category": ""
+      },
+      {
+        "command": "serverlessConsole.delete-dynamodb-item",
+        "title": "Delete DynamoDB item"
       }
     ],
     "viewsContainers": {
@@ -210,7 +219,9 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
+    "@types/fs-extra": "^8.1.0",
     "@types/glob": "^7.1.1",
+    "@types/lodash": "^4.14.149",
     "@types/mocha": "^5.2.6",
     "@types/moment": "^2.13.0",
     "@types/node": "^10.12.21",
@@ -228,6 +239,9 @@
   "dependencies": {
     "@aws-sdk/shared-ini-file-loader": "0.1.0-preview.1",
     "aws-sdk": "^2.541.0",
+    "fs-extra": "^8.1.0",
+    "jsonc-parser": "^2.2.0",
+    "lodash": "^4.17.15",
     "moment": "2.24.0",
     "yaml": "1.7.0"
   },

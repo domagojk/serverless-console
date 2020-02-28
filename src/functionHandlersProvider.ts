@@ -1,9 +1,9 @@
 import * as vscode from 'vscode'
 import { TreeItem } from './TreeItem'
 import { Service } from './extension'
-import { serverlessFrameworkService } from './serviceGenerators/serverlessFrameworkService'
-import { cloudformationService } from './serviceGenerators/cloudformationService'
-import { dynamoDbService } from './serviceGenerators/dynamodbService'
+import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
+import { cloudformationService } from './logs/cloudformationService'
+import { dynamoDbService } from './dynamoDb/dynamodbService'
 
 export class FunctionHandlersProvider
   implements vscode.TreeDataProvider<TreeItem> {
@@ -40,12 +40,17 @@ export class FunctionHandlersProvider
             {
               extensionPath: this.extensionPath,
               label: 'You have not yet opened a folder.',
-              type: 'service'
+              isService: true
             },
             vscode.TreeItemCollapsibleState.None
           )
         ]
       }
+
+      const collapsibleState =
+        this.services.length > 1
+          ? vscode.TreeItemCollapsibleState.Collapsed
+          : vscode.TreeItemCollapsibleState.Expanded
 
       if (this.services.length === 0) {
         return [
@@ -53,12 +58,12 @@ export class FunctionHandlersProvider
             {
               extensionPath: this.extensionPath,
               label: 'Click to add a service...',
-              type: 'service'
+              isService: true
             },
             vscode.TreeItemCollapsibleState.None,
             {
               command: 'serverlessConsole.addService',
-              title: 'show help page',
+              title: 'Add a service',
               arguments: []
             }
           )
@@ -71,10 +76,10 @@ export class FunctionHandlersProvider
               extensionPath: this.extensionPath,
               label: service.title || `executing "${service.command}"...`,
               icon: 'loading',
-              type: 'service',
+              isService: true,
               service
             },
-            vscode.TreeItemCollapsibleState.Expanded
+            collapsibleState
           )
         }
 
@@ -85,7 +90,7 @@ export class FunctionHandlersProvider
               label: service.command
                 ? `error running "${service.command}"`
                 : service.title,
-              type: 'service',
+              isService: true,
               icon: 'error',
               service
             },
@@ -102,29 +107,32 @@ export class FunctionHandlersProvider
           {
             extensionPath: this.extensionPath,
             label: service.title,
-            icon: null,
-            type: 'service',
+            icon: service.icon,
+            isService: true,
             service
           },
-          vscode.TreeItemCollapsibleState.Expanded
+          collapsibleState
         )
       })
-    } else if (element.settings.type === 'service') {
-      return element.settings.service.items?.map(item => {
+    } else {
+      const items = element.settings.isService
+        ? element.settings.service?.items
+        : element.settings?.serviceItem?.items
+
+      return items?.map(item => {
         return new TreeItem(
           {
             extensionPath: this.extensionPath,
             ...element.settings,
+            isService: false,
             label: item.title,
-            type:
-              element.settings.service.type === 'dynamodb'
-                ? 'dynamodb'
-                : 'function',
             localSrc: item.uri,
             description: item.description,
-            serviceItem: item
+            serviceItem: item,
+            icon: item.icon,
+            command: item.command
           },
-          vscode.TreeItemCollapsibleState.None
+          item.collapsibleState ?? vscode.TreeItemCollapsibleState.None
         )
       })
     }
@@ -153,25 +161,31 @@ export class FunctionHandlersProvider
       this.services
         .filter(s => s.isLoading)
         .map(service => {
-          const handler =
-            service.type === 'serverlessFramework'
-              ? serverlessFrameworkService
-              : service.type === 'cloudformation'
-              ? cloudformationService
-              : service.type === 'dynamodb'
-              ? dynamoDbService
-              : null
-
-          if (handler) {
-            return handler(service).then(updatedService => {
-              this.mutateServiceByHash({
-                ...updatedService,
-                isLoading: false
-              })
-            })
-          }
+          this.refreshService(service)
         })
     )
+  }
+
+  async refreshService(service: Service) {
+    const handler =
+      service.type === 'serverlessFramework'
+        ? serverlessFrameworkService
+        : service.type === 'cloudformation'
+        ? cloudformationService
+        : service.type === 'dynamodb'
+        ? dynamoDbService
+        : null
+
+    if (handler) {
+      const updatedService = await handler(service)
+      this.mutateServiceByHash({
+        ...updatedService,
+        isLoading: false
+      })
+      return updatedService
+    }
+
+    return service
   }
 
   mutateServiceByHash(service: Service) {

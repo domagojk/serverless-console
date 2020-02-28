@@ -13,56 +13,38 @@ export class TreeItem extends vscode.TreeItem {
   constructor(
     public readonly settings: {
       extensionPath: string
-      type: string
+      isService: boolean
       label: string
       icon?: string
       service?: Service
       serviceItem?: ServiceItem
       description?: string
+      command?: {
+        command: string
+        title: string
+      }
       localSrc?: vscode.Uri
     },
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly command?: vscode.Command
   ) {
     super(settings.label, collapsibleState)
-    this.contextValue = settings.type
+    this.contextValue = settings.isService ? 'service' : null
 
-    if (settings.type === 'service') {
-      switch (settings.icon) {
-        case 'error':
-          this.iconPathObj = getImgPath(settings.extensionPath, 'error')
-          break
-        case 'loading':
-          this.iconPathObj = getImgPath(settings.extensionPath, 'loading')
-          break
-        default:
-          this.iconPathObj = null
+    if (settings.icon) {
+      this.iconPathObj = getImgPath(settings.extensionPath, settings.icon)
+    }
+
+    if (settings.command) {
+      this.command = {
+        ...settings.command,
+        arguments: [this]
       }
     }
 
-    if (settings.type === 'function') {
-      this.command = {
-        command: 'serverlessConsole.openLogs',
-        title: 'open file',
-        arguments: [this]
-      }
-
-      if (settings.localSrc) {
-        this.uri = settings.localSrc
-        this.contextValue = 'function-localRef'
-      }
-
-      if (settings.serviceItem.tabs.find(t => t.lambda)) {
-        this.iconPathObj = getImgPath(settings.extensionPath, 'lambda')
-      } else if (settings.serviceItem.tabs.find(t => t.logs)) {
-        this.iconPathObj = getImgPath(settings.extensionPath, 'cloudwatch')
-      }
-    } else if (settings.type === 'dynamodb') {
-      this.command = {
-        command: 'serverlessConsole.openDynamoDb',
-        title: 'open table',
-        arguments: [this]
-      }
+    if (settings.localSrc) {
+      this.uri = settings.localSrc
+      this.contextValue = 'function-localRef'
     }
 
     this.iconPath = this.iconPathObj
@@ -76,8 +58,10 @@ export class TreeItem extends vscode.TreeItem {
 }
 
 function getImgPath(extesionPath: string, name: string) {
+  const extension = name.includes('.') ? '' : '.svg'
+
   return {
-    dark: path.join(extesionPath, `resources/dark/${name}.svg`),
-    light: path.join(extesionPath, `resources/light/${name}.svg`)
+    dark: path.join(extesionPath, `resources/dark/${name}${extension}`),
+    light: path.join(extesionPath, `resources/light/${name}${extension}`)
   }
 }

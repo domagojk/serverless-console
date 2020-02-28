@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { TreeItem } from '../TreeItem'
 import { join } from 'path'
-import { getWebviewContent } from '../functionLogsWebview'
+import { getWebviewContent } from './functionLogsWebview'
 import {
   getFontSize,
   getGroupPerRequest,

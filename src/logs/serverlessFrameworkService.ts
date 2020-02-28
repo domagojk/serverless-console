@@ -79,6 +79,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           ...service,
           title: service.title || yml.service.name,
           region: yml.provider.region,
+          icon: 'serverless-logs.png',
           items: Object.keys(yml.functions).map(fnName => {
             const handler = yml.functions[fnName].handler
             const handlerArr = handler.split('/')
@@ -121,7 +122,12 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
                 title: stage,
                 logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
                 lambda: `${yml.service.name}-${stage}-${fnName}`
-              }))
+              })),
+              command: {
+                command: 'serverlessConsole.openLogs',
+                title: 'Open Logs'
+              },
+              icon: 'lambda'
             }
           })
         })

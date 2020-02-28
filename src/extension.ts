@@ -1,14 +1,21 @@
 import * as vscode from 'vscode'
 import { FunctionHandlersProvider } from './functionHandlersProvider'
 import { getServices } from './settings'
-import { removeService } from './commands/removeService'
-import { openFunction } from './commands/openFunction'
-import { addService } from './commands/addService'
-import { openLogs } from './commands/openLogs'
-import { openDynamoDb } from './commands/openDynamoDb'
+import { removeService } from './removeService'
+import { openFunction } from './logs/openFunction'
+import { addService } from './addService'
+import { openLogs } from './logs/openLogs'
+import {
+  openDynamoDb,
+  postDefineDynamoDbCommandsMessage
+} from './dynamoDb/openDynamoDb'
+import { DynamoDBCodeLens } from './dynamoDb/DynamoDbCodeLens'
+import { TreeItem } from './TreeItem'
+import { join } from 'path'
+import { tmpdir } from 'os'
 
 export type ServiceItem = {
-  title: string
+  title?: string
   description?: string
   uri?: any
   tabs?: {
@@ -17,6 +24,13 @@ export type ServiceItem = {
     lambda?: string
     region?: string
   }[]
+  icon?: string
+  command?: {
+    command: string
+    title: string
+  }
+  collapsibleState?: vscode.TreeItemCollapsibleState
+  items?: ServiceItem[]
 }
 
 export type Service = {
@@ -27,6 +41,7 @@ export type Service = {
     stage: string
     region?: string
   }[]
+  icon?: string
   awsProfile?: string
   region?: string
   isLoading?: boolean
@@ -37,6 +52,10 @@ export type Service = {
   stages?: string[]
   timeOffsetInMs?: number
   items?: ServiceItem[]
+  context?: {
+    changes?: string[]
+    onChangesUpdated?: vscode.EventEmitter<string[]>
+  }
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -125,8 +144,98 @@ export async function activate(context: vscode.ExtensionContext) {
     fnHandlerProvider.refreshServices(getServices(), { refreshAll: true })
   })
 
-  // debug lambda archived
-  // https://gist.github.com/domagojk/2380ce14dcabf6b138ab5f81b43717f0
+  // vscode.commands.registerCommand(
+  //   'serverlessConsole.update-dynamodb-item',
+  //   (
+  //     document: vscode.TextDocument,
+  //     panel: vscode.WebviewPanel,
+  //     { oldData, newData, hashKey, sortKey }
+  //   ) => {
+  //     let isDisposed = false
+  //     try {
+  //       panel.webview
+  //     } catch (err) {
+  //       isDisposed = true
+  //     }
+  //     if (isDisposed) {
+  //       // todo error
+  //       return vscode.window.showErrorMessage(
+  //         'Can not save the item since parent DynamoDb console is closed'
+  //       )
+  //     }
+
+  //     vscode.commands.executeCommand('workbench.action.closeActiveEditor')
+  //     setTimeout(() => panel.reveal(), 0)
+
+  //     const compositKey = !sortKey
+  //       ? newData[hashKey]
+  //       : `${newData[hashKey]}-${newData[sortKey]}`
+
+  //     panel.webview.postMessage({
+  //       type: 'addDynamoDbCommand',
+  //       payload: {
+  //         id: Math.random(),
+  //         action: 'update',
+  //         compositKey,
+  //         timestamp: Date.now(),
+  //         newData
+  //       }
+  //     })
+  //   }
+  // )
+
+  // for diff, read-only virtual docs should be used
+  // await vscode.commands.executeCommand('vscode.diff', uriLeft, uriRight, 'title')
+
+  // `${now.format('MMMDD-HH_mm_ss')}.json`
+
+  let codelensProvider = new DynamoDBCodeLens()
+  vscode.languages.registerCodeLensProvider(['json'], codelensProvider)
+
+  const dynamoDbTmpFolder = join(tmpdir(), 'vscode-sls-console/')
+
+  vscode.workspace.onDidSaveTextDocument(e => {
+    if (e.uri.fsPath.startsWith(dynamoDbTmpFolder)) {
+      const relativePart = e.uri.fsPath.substr(dynamoDbTmpFolder.length)
+      const [serviceHash, index, item] = relativePart.split('/')
+      const service = fnHandlerProvider.services.find(
+        service => service.hash === serviceHash
+      )
+      if (service) {
+        fnHandlerProvider.refreshService(service)
+      }
+    }
+  })
+
+  // todo:
+  // delete item command
+  // deletes file from tmp and refreshes service
+
+  // create item command
+  // creates fike in tmp and refreshes service
+
+  // icons for changes
+  
+  // diff for changes
+
+  // execute dynamodb changes
+  // reads directory and generates dynamodb commands
+  // executing it one by one
+  // opens items for updates
+  // every commands pushes message about its status,
+  // if there is an error, it can be read in log of the items webvide
+
+  // handle /scan /orher-index
+  // ? yes update only modified items like in aws console
+  //    - compare witch items by using get-xy in the index/ folder
+
+  // num of changes icon (kao za git (2))
+
+  // saved query support
+
+  // codelens
+  // -Refresh DynamoDB Item
+  // -Compare with original DynamoDB item
 }
 
 // this method is called when your extension is deactivated

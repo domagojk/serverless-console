@@ -163,6 +163,7 @@ export async function cloudformationService(
 
     return {
       ...service,
+      icon: 'serverless-logs.png',
       items: functionsArr
         .filter(fn => fn.log)
         .map(fn => {
@@ -180,7 +181,12 @@ export async function cloudformationService(
                 lambda: fn.stages[stage].lambda,
                 region: fn.stages[stage].region
               }
-            })
+            }),
+            command: {
+              command: 'serverlessConsole.openLogs',
+              title: 'Open Logs'
+            },
+            icon: 'lambda'
           }
         })
     }

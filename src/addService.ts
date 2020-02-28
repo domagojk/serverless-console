@@ -1,11 +1,11 @@
 import * as vscode from 'vscode'
 import { join } from 'path'
 import { loadSharedConfigFiles } from '@aws-sdk/shared-ini-file-loader'
-import { getFontSize, getServiceHash, prepareService } from '../settings'
-import { getWebviewContent } from '../functionLogsWebview'
-import { getAwsSdk } from '../getAwsSdk'
-import { serverlessFrameworkService } from '../serviceGenerators/serverlessFrameworkService'
-import { cloudformationService } from '../serviceGenerators/cloudformationService'
+import { getFontSize, getServiceHash, prepareService } from './settings'
+import { getWebviewContent } from './logs/functionLogsWebview'
+import { getAwsSdk } from './getAwsSdk'
+import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
+import { cloudformationService } from './logs/cloudformationService'
 
 let panel: vscode.WebviewPanel = null
 

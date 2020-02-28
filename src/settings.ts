@@ -4,26 +4,6 @@ import { Service } from './extension'
 import { existsSync } from 'fs'
 import { createHash } from 'crypto'
 
-export function prepareService(conf) {
-  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.path
-
-  delete conf.hash
-  const hash = getServiceHash(conf)
-
-  if (conf.type === 'serverlessFramework') {
-    return {
-      ...conf,
-      hash,
-      cwd: path.join(workspaceDir, conf.cwd)
-    }
-  } else {
-    return {
-      ...conf,
-      hash
-    }
-  }
-}
-
 export function getServices(initial?: boolean): Service[] {
   let services: any[] = vscode.workspace
     .getConfiguration()
@@ -55,6 +35,44 @@ export function getServices(initial?: boolean): Service[] {
   }
 
   return services.map(prepareService)
+}
+
+export function prepareService(conf) {
+  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.path
+
+  delete conf.hash
+  const hash = getServiceHash(conf)
+
+  if (conf.type === 'serverlessFramework') {
+    return {
+      ...conf,
+      hash,
+      cwd: path.join(workspaceDir, conf.cwd)
+    }
+  } else if (conf.type === 'custom') {
+    return {
+      ...conf,
+      icon: 'serverless-logs.png',
+      items: conf.items?.map(item => {
+        const isLambda = item.tabs?.find(t => t.lambda)
+        const isCloudwatchLog = item.tabs?.find(t => t.logs)
+
+        return {
+          ...item,
+          command: {
+            command: 'serverlessConsole.openLogs',
+            title: 'Open Logs'
+          },
+          icon: isLambda ? 'lambda' : isCloudwatchLog ? 'cloudwatch' : null
+        }
+      })
+    }
+  } else {
+    return {
+      ...conf,
+      hash
+    }
+  }
 }
 
 export function getServiceHash(service) {

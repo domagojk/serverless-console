@@ -1,0 +1,17 @@
+- react-table za ispis
+- integracija sa dynamodb ili json fileom za prikaz jsona, edit, query
+ - query folder sa .json examplima
+ - unutar jednog filea array querya koji se može pokrenut
+
+- query na dnu
+- na delete, ide opacity 0.2, na edit, druga boja i to se commita
+- na execute se refresha tablica koja se gleda
+
+- ui
+    - items: scan/query kopirat aws
+    - overview: kopirat aws
+    - command history: delete/add/edit ide preko ts komandi koje se mogu vidit u historyu
+        - syntax higlight za ts za te commande
+- code integration
+    - *.dynamodb.ts
+        - execute 
