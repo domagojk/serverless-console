@@ -5,8 +5,7 @@ import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
 import { cloudformationService } from './logs/cloudformationService'
 import { dynamoDbService } from './dynamoDb/dynamodbService'
 
-export class FunctionHandlersProvider
-  implements vscode.TreeDataProvider<TreeItem> {
+export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | null> = new vscode.EventEmitter<TreeItem | null>()
   readonly onDidChangeTreeData: vscode.Event<TreeItem | null> = this
     ._onDidChangeTreeData.event
@@ -96,7 +95,7 @@ export class FunctionHandlersProvider
             },
             vscode.TreeItemCollapsibleState.None,
             {
-              command: 'fnHandlerList.showError',
+              command: 'slsConsoleTree.showError',
               title: 'show error',
               arguments: [service.error]
             }

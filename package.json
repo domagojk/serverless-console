@@ -24,7 +24,7 @@
     "AWS"
   ],
   "activationEvents": [
-    "onView:fnHandlerList"
+    "onView:slsConsoleTree"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -85,6 +85,10 @@
               },
               "title": {
                 "type": "string"
+              },
+              "tableName": {
+                "type": "string",
+                "description": "DynamoDB table name"
               },
               "items": {
                 "type": "array",
@@ -164,6 +168,10 @@
       {
         "command": "serverlessConsole.delete-dynamodb-item",
         "title": "Delete DynamoDB item"
+      },
+      {
+        "command": "serverlessConsole.openDynamoDbItemDiff",
+        "title": "Open DynamoDB Item Diff"
       }
     ],
     "viewsContainers": {
@@ -178,7 +186,7 @@
     "views": {
       "serverlessConsole": [
         {
-          "id": "fnHandlerList",
+          "id": "slsConsoleTree",
           "name": ""
         }
       ]
@@ -187,23 +195,23 @@
       "view/title": [
         {
           "command": "serverlessConsole.refreshEntry",
-          "when": "view == fnHandlerList",
+          "when": "view == slsConsoleTree",
           "group": "navigation"
         },
         {
           "command": "serverlessConsole.addService",
-          "when": "view == fnHandlerList",
+          "when": "view == slsConsoleTree",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
           "command": "serverlessConsole.removeService",
-          "when": "view == fnHandlerList && viewItem == service"
+          "when": "view == slsConsoleTree && viewItem == service"
         },
         {
           "command": "serverlessConsole.openFunction",
-          "when": "view == fnHandlerList && viewItem == function-localRef",
+          "when": "view == slsConsoleTree && viewItem == function-localRef",
           "group": "inline"
         }
       ]

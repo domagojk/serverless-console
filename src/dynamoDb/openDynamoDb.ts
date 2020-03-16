@@ -5,12 +5,16 @@ import { TreeItem } from '../TreeItem'
 import { join } from 'path'
 import { getWebviewContent } from '../logs/functionLogsWebview'
 import { getFontSize, getFontFamily } from '../settings'
-//import { createHash } from 'crypto'
-import { existsSync } from 'fs'
+import { existsSync, writeFile } from 'fs'
+import { TreeDataProvider } from '../treeDataProvider'
+import { getAwsSdk } from '../getAwsSdk'
+import { updateTableDescription, getFormattedJSON } from './dynamodbService'
+import { DynamoDbFileChange } from '../extension'
 
-export const openDynamoDb = (context: vscode.ExtensionContext) => async (
-  treeItem: TreeItem
-) => {
+export const openDynamoDb = (
+  context: vscode.ExtensionContext,
+  treeDataProvider: TreeDataProvider
+) => async (treeItem: TreeItem) => {
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const extesionPath = context.extensionPath
@@ -66,7 +70,7 @@ export const openDynamoDb = (context: vscode.ExtensionContext) => async (
       }
     }
 
-    service?.context?.onChangesUpdated?.event(changes => {
+    service.context?.onChangesUpdated?.event(changes => {
       postDefineDynamoDbCommandsMessage(changes, treeItem.panel)
 
       treeItem.panel.title = changes.length
@@ -77,6 +81,81 @@ export const openDynamoDb = (context: vscode.ExtensionContext) => async (
     treeItem.panel.webview.onDidReceiveMessage(
       async message => {
         switch (message.command) {
+          case 'describeTable': {
+            if (!service.context?.tableDescribeOutput) {
+              await updateTableDescription(service)
+            }
+
+            treeItem.panel?.webview?.postMessage({
+              messageId: message.messageId,
+              payload: service.context.tableDescribeOutput
+            })
+            break
+          }
+          case 'fetchItems': {
+            const AWS = getAwsSdk(service.awsProfile, service.region)
+            const dynamoDb = new AWS.DynamoDB.DocumentClient()
+
+            if (message.payload.type === 'scan') {
+              const res = await dynamoDb
+                .scan({
+                  TableName: service.tableName,
+                  Limit: 100,
+                  ExclusiveStartKey: message.payload.lastEvaluatedKey
+                })
+                .promise()
+
+              treeItem.panel?.webview?.postMessage({
+                messageId: message.messageId,
+                payload: res
+              })
+            }
+
+            break
+          }
+          case 'createItem': {
+            if (!service.context?.tableDescribeOutput) {
+              await updateTableDescription(service)
+            }
+
+            const localDocPath = path.join(
+              os.tmpdir(),
+              `vscode-sls-console/${treeItem.settings.service.hash}/scan`,
+              `create-${Date.now()}.json`
+            )
+
+            const uri = vscode.Uri.file(localDocPath).with({
+              scheme: 'untitled'
+            })
+
+            const doc = await vscode.workspace.openTextDocument(uri)
+            const editor = await vscode.window.showTextDocument(
+              doc,
+              vscode.ViewColumn.Beside
+            )
+
+            const initialData = service.context.tableDescribeOutput.AttributeDefinitions.reduce(
+              (acc, curr) => {
+                // todo add all attribute values
+                return {
+                  ...acc,
+                  [curr.AttributeName]:
+                    curr.AttributeType === 'N'
+                      ? 0
+                      : curr.AttributeType === 'S'
+                      ? ''
+                      : null
+                }
+              },
+              {}
+            )
+
+            editor.edit(edit => {
+              const { stringified } = getFormattedJSON(initialData)
+              edit.insert(new vscode.Position(0, 0), stringified)
+            })
+            break
+          }
           case 'componentMounted': {
             postDefineDynamoDbCommandsMessage(
               service.context.changes,
@@ -88,26 +167,12 @@ export const openDynamoDb = (context: vscode.ExtensionContext) => async (
 
             break
           }
-          case 'openJSON': {
-            // const commandHash = createHash('md5')
-            //   .update(JSON.stringify(message.payload))
-            //   .digest('hex')
-
-            const json = message.payload.content
+          case 'deleteItem': {
             const { sortKey, hashKey } = message.payload
-            let sortedJSON = {}
+            const compositKey =
+              sortKey === undefined ? hashKey : `${hashKey}-${sortKey}`
 
-            message.payload.columns.forEach(column => {
-              if (json[column] !== undefined) {
-                sortedJSON[column] = json[column]
-              }
-            })
-
-            const compositKey = !sortKey
-              ? json[hashKey]
-              : `${json[hashKey]}-${json[sortKey]}`
-
-            const fileName = `update-${compositKey}.json`
+            const fileName = `delete-${compositKey}.json`
 
             const localDocPath = path.join(
               os.tmpdir(),
@@ -115,12 +180,48 @@ export const openDynamoDb = (context: vscode.ExtensionContext) => async (
               fileName
             )
 
-            // todo:
-            // if index, show dialog "this is the item from index x, open GetItem by primary key", dont show again
+            const { stringified } = getFormattedJSON(
+              service.context.sortKey
+                ? {
+                    [service.context.hashKey]: hashKey,
+                    [service.context.sortKey]: sortKey
+                  }
+                : {
+                    [service.context.hashKey]: hashKey
+                  }
+            )
 
-            const fileExists = existsSync(localDocPath)
+            await new Promise(resolve =>
+              writeFile(localDocPath, stringified, () => {
+                resolve()
+              })
+            )
 
-            const uri = fileExists
+            treeDataProvider.refreshService(treeItem.settings.service)
+            break
+          }
+          case 'editItem': {
+            const { sortKey, hashKey } = service.context
+            const { json, stringified, space } = getFormattedJSON(
+              message.payload.content,
+              message.payload.columns
+            )
+
+            const compositKey = !sortKey
+              ? json[hashKey]
+              : `${json[hashKey]}-${json[sortKey]}`
+
+            const localDirPath = path.join(
+              os.tmpdir(),
+              `vscode-sls-console/${treeItem.settings.service.hash}/scan`
+            )
+            const localDocPath = path.join(
+              localDirPath,
+              `update-${compositKey}.json`
+            )
+
+            const doesFileExists = existsSync(localDocPath)
+            const uri = doesFileExists
               ? vscode.Uri.file(localDocPath)
               : vscode.Uri.file(localDocPath).with({ scheme: 'untitled' })
 
@@ -131,21 +232,9 @@ export const openDynamoDb = (context: vscode.ExtensionContext) => async (
             )
 
             const shouldSelectProperty =
-              sortedJSON &&
+              json &&
               message.payload.selectColumn &&
-              sortedJSON[message.payload.selectColumn] !== undefined
-
-            const useSpaces: boolean = vscode.workspace
-              .getConfiguration(null, null)
-              .get('editor.insertSpaces')
-
-            const tabSize: number = vscode.workspace
-              .getConfiguration(null, null)
-              .get('editor.tabSize')
-
-            const space = useSpaces
-              ? Array.from(Array(tabSize + 1)).join(' ')
-              : '\t'
+              json[message.payload.selectColumn] !== undefined
 
             if (doc.getText()) {
               if (shouldSelectProperty) {
@@ -159,8 +248,7 @@ export const openDynamoDb = (context: vscode.ExtensionContext) => async (
             }
 
             editor.edit(edit => {
-              const content = `${JSON.stringify(sortedJSON, null, space)}`
-              edit.insert(new vscode.Position(0, 0), content)
+              edit.insert(new vscode.Position(0, 0), stringified)
               if (!shouldSelectProperty) {
                 // if there is no text that should be selected
                 // exit the function
@@ -210,21 +298,23 @@ export const openDynamoDb = (context: vscode.ExtensionContext) => async (
 }
 
 export function postDefineDynamoDbCommandsMessage(
-  folderList: string[],
+  folderList: DynamoDbFileChange[],
   panel: vscode.WebviewPanel
 ) {
-  const commands = folderList
-    .filter(file => {
-      return file.startsWith('update-') && file.endsWith('.json')
-    })
-    .map(file => {
-      return {
-        id: Math.random(),
-        action: 'update',
-        compositKey: file.slice(7, file.length - 5),
-        timestamp: Date.now()
-      }
-    })
+  const commands = folderList.map(file => {
+    return {
+      id: Math.random(),
+      action: file.name.startsWith('update-')
+        ? 'update'
+        : file.name.startsWith('delete-')
+        ? 'delete'
+        : file.name.startsWith('create-')
+        ? 'create'
+        : null,
+      compositKey: file.compositKey,
+      timestamp: file.modified
+    }
+  })
 
   panel?.webview?.postMessage({
     type: 'defineDynamoDbCommands',

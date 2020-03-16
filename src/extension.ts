@@ -1,18 +1,18 @@
 import * as vscode from 'vscode'
-import { FunctionHandlersProvider } from './functionHandlersProvider'
+import { TreeDataProvider } from './treeDataProvider'
 import { getServices } from './settings'
 import { removeService } from './removeService'
 import { openFunction } from './logs/openFunction'
 import { addService } from './addService'
 import { openLogs } from './logs/openLogs'
+import { openDynamoDb } from './dynamoDb/openDynamoDb'
 import {
-  openDynamoDb,
-  postDefineDynamoDbCommandsMessage
-} from './dynamoDb/openDynamoDb'
-import { DynamoDBCodeLens } from './dynamoDb/DynamoDbCodeLens'
-import { TreeItem } from './TreeItem'
+  openDynamoDbItemDiff,
+  DynamoDiffProvider
+} from './dynamoDb/openDynamoDbItemDiff'
 import { join } from 'path'
 import { tmpdir } from 'os'
+import { DynamoDB } from 'aws-sdk'
 
 export type ServiceItem = {
   title?: string
@@ -52,17 +52,27 @@ export type Service = {
   stages?: string[]
   timeOffsetInMs?: number
   items?: ServiceItem[]
+  tableName?: string
   context?: {
-    changes?: string[]
-    onChangesUpdated?: vscode.EventEmitter<string[]>
+    changes?: DynamoDbFileChange[]
+    onChangesUpdated?: vscode.EventEmitter<DynamoDbFileChange[]>
+    tableDescribeOutput?: DynamoDB.TableDescription
+    hashKey?: string
+    sortKey?: string
   }
+}
+
+export type DynamoDbFileChange = {
+  name: string
+  compositKey: string
+  modified: number
 }
 
 export async function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
     vscode.window.registerTreeDataProvider(
-      'fnHandlerList',
-      new FunctionHandlersProvider({
+      'slsConsoleTree',
+      new TreeDataProvider({
         services: [],
         noFolder: true,
         extensionPath: context.extensionPath
@@ -75,15 +85,15 @@ export async function activate(context: vscode.ExtensionContext) {
   const services = getServices(true)
 
   // Tree Provider instances
-  const fnHandlerProvider = new FunctionHandlersProvider({
+  const treeDataProvider = new TreeDataProvider({
     services,
     extensionPath: context.extensionPath
   })
 
   // register tree data providers
-  vscode.window.registerTreeDataProvider('fnHandlerList', fnHandlerProvider)
+  vscode.window.registerTreeDataProvider('slsConsoleTree', treeDataProvider)
 
-  fnHandlerProvider.refreshServices(services, { refreshAll: true })
+  treeDataProvider.refreshServices(services, { refreshAll: true })
 
   vscode.commands.registerCommand(
     'serverlessConsole.openFunction',
@@ -97,7 +107,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   let webviewErroPanel: vscode.WebviewPanel = null
 
-  vscode.commands.registerCommand('fnHandlerList.showError', async error => {
+  vscode.commands.registerCommand('slsConsoleTree.showError', async error => {
     if (!webviewErroPanel) {
       webviewErroPanel = vscode.window.createWebviewPanel(
         'slsConsole-error',
@@ -129,68 +139,25 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.registerCommand(
     'serverlessConsole.openDynamoDb',
-    openDynamoDb(context)
+    openDynamoDb(context, treeDataProvider)
+  )
+
+  vscode.commands.registerCommand(
+    'serverlessConsole.openDynamoDbItemDiff',
+    openDynamoDbItemDiff(context)
   )
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('serverlessConsole.services')) {
-        fnHandlerProvider.refreshServices(getServices())
+        treeDataProvider.refreshServices(getServices())
       }
     })
   )
 
   vscode.commands.registerCommand('serverlessConsole.refreshEntry', () => {
-    fnHandlerProvider.refreshServices(getServices(), { refreshAll: true })
+    treeDataProvider.refreshServices(getServices(), { refreshAll: true })
   })
-
-  // vscode.commands.registerCommand(
-  //   'serverlessConsole.update-dynamodb-item',
-  //   (
-  //     document: vscode.TextDocument,
-  //     panel: vscode.WebviewPanel,
-  //     { oldData, newData, hashKey, sortKey }
-  //   ) => {
-  //     let isDisposed = false
-  //     try {
-  //       panel.webview
-  //     } catch (err) {
-  //       isDisposed = true
-  //     }
-  //     if (isDisposed) {
-  //       // todo error
-  //       return vscode.window.showErrorMessage(
-  //         'Can not save the item since parent DynamoDb console is closed'
-  //       )
-  //     }
-
-  //     vscode.commands.executeCommand('workbench.action.closeActiveEditor')
-  //     setTimeout(() => panel.reveal(), 0)
-
-  //     const compositKey = !sortKey
-  //       ? newData[hashKey]
-  //       : `${newData[hashKey]}-${newData[sortKey]}`
-
-  //     panel.webview.postMessage({
-  //       type: 'addDynamoDbCommand',
-  //       payload: {
-  //         id: Math.random(),
-  //         action: 'update',
-  //         compositKey,
-  //         timestamp: Date.now(),
-  //         newData
-  //       }
-  //     })
-  //   }
-  // )
-
-  // for diff, read-only virtual docs should be used
-  // await vscode.commands.executeCommand('vscode.diff', uriLeft, uriRight, 'title')
-
-  // `${now.format('MMMDD-HH_mm_ss')}.json`
-
-  let codelensProvider = new DynamoDBCodeLens()
-  vscode.languages.registerCodeLensProvider(['json'], codelensProvider)
 
   const dynamoDbTmpFolder = join(tmpdir(), 'vscode-sls-console/')
 
@@ -198,25 +165,27 @@ export async function activate(context: vscode.ExtensionContext) {
     if (e.uri.fsPath.startsWith(dynamoDbTmpFolder)) {
       const relativePart = e.uri.fsPath.substr(dynamoDbTmpFolder.length)
       const [serviceHash, index, item] = relativePart.split('/')
-      const service = fnHandlerProvider.services.find(
+      const service = treeDataProvider.services.find(
         service => service.hash === serviceHash
       )
       if (service) {
-        fnHandlerProvider.refreshService(service)
+        treeDataProvider.refreshService(service)
       }
     }
   })
 
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(
+      'dynamodb-item-diff',
+      new DynamoDiffProvider(treeDataProvider)
+    )
+  )
   // todo:
-  // delete item command
-  // deletes file from tmp and refreshes service
 
-  // create item command
-  // creates fike in tmp and refreshes service
-
-  // icons for changes
-  
-  // diff for changes
+  // handle /scan /orher-index
+  // update only modified items like in aws console
+  //   - compare witch items by using getItem in /scan and queryItem with proper values if not scan
+  //   - diff similar to vscode in order to figure out dynamodb command (not updating the whole doc, aws console also updates per prop)
 
   // execute dynamodb changes
   // reads directory and generates dynamodb commands
@@ -225,17 +194,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // every commands pushes message about its status,
   // if there is an error, it can be read in log of the items webvide
 
-  // handle /scan /orher-index
-  // ? yes update only modified items like in aws console
-  //    - compare witch items by using get-xy in the index/ folder
+  
 
   // num of changes icon (kao za git (2))
 
   // saved query support
-
-  // codelens
-  // -Refresh DynamoDB Item
-  // -Compare with original DynamoDB item
 }
 
 // this method is called when your extension is deactivated
