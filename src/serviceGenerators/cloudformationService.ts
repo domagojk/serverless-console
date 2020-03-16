@@ -1,6 +1,7 @@
 import { Service } from '../extension'
-import { getAwsSdk } from '../getAwsSdk'
 import * as YAML from 'yaml'
+import { CloudFormation } from 'aws-sdk'
+import { getAwsCredentials } from '../getAwsCredentials'
 
 export async function cloudformationService(
   service: Service
@@ -12,8 +13,9 @@ export async function cloudformationService(
       const region = stack.region || 'us-east-1'
       const profile = service.awsProfile || 'default'
 
-      const AWS = getAwsSdk(profile, region)
-      const cloudformation = new AWS.CloudFormation({
+      const credentials = await getAwsCredentials(profile)
+      const cloudformation = new CloudFormation({
+        credentials,
         region
       })
 

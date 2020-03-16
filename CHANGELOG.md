@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.5.11]
+- Added support for AWS profiles using assumed role (issue #11)
+
 ## [0.5.9]
 - Fixed bug with auto refresh (ignoring request if tab is not visible)
 
