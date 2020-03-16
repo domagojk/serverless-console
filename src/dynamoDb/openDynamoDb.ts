@@ -7,9 +7,10 @@ import { getWebviewContent } from '../logs/functionLogsWebview'
 import { getFontSize, getFontFamily } from '../settings'
 import { existsSync, writeFile } from 'fs'
 import { TreeDataProvider } from '../treeDataProvider'
-import { getAwsSdk } from '../getAwsSdk'
+import { getAwsCredentials } from '../getAwsCredentials'
 import { updateTableDescription, getFormattedJSON } from './dynamodbService'
 import { DynamoDbFileChange } from '../extension'
+import { DynamoDB } from 'aws-sdk'
 
 export const openDynamoDb = (
   context: vscode.ExtensionContext,
@@ -93,8 +94,11 @@ export const openDynamoDb = (
             break
           }
           case 'fetchItems': {
-            const AWS = getAwsSdk(service.awsProfile, service.region)
-            const dynamoDb = new AWS.DynamoDB.DocumentClient()
+            const credentials = await getAwsCredentials(service.awsProfile)
+            const dynamoDb = new DynamoDB.DocumentClient({
+              credentials,
+              region: service.region
+            })
 
             if (message.payload.type === 'scan') {
               const res = await dynamoDb

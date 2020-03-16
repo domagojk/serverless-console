@@ -4,7 +4,8 @@ import { TreeItemCollapsibleState, EventEmitter } from 'vscode'
 import { readdir, statSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { getAwsSdk } from '../getAwsSdk'
+import { getAwsCredentials } from '../getAwsCredentials'
+import { DynamoDB } from 'aws-sdk'
 
 export async function dynamoDbService(service: Service): Promise<Service> {
   const basePath = join(tmpdir(), `vscode-sls-console/${service.hash}/scan`)
@@ -104,8 +105,12 @@ export async function dynamoDbService(service: Service): Promise<Service> {
 }
 
 export async function updateTableDescription(service: Service) {
-  const AWS = getAwsSdk(service.awsProfile, service.region)
-  const dynamoDb = new AWS.DynamoDB()
+  const credentials = await getAwsCredentials(service.awsProfile)
+  const dynamoDb = new DynamoDB({
+    credentials,
+    region: service.region
+  })
+
   const res = await dynamoDb
     .describeTable({
       TableName: service.tableName
@@ -129,8 +134,11 @@ export async function getItem(
   hashKey: string,
   sortKey?: string
 ) {
-  const AWS = getAwsSdk(service.awsProfile, service.region)
-  const dynamoDb = new AWS.DynamoDB.DocumentClient()
+  const credentials = await getAwsCredentials(service.awsProfile)
+  const dynamoDb = new DynamoDB.DocumentClient({
+    credentials,
+    region: service.region
+  })
 
   return dynamoDb
     .get({

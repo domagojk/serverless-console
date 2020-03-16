@@ -50,6 +50,7 @@ export type Service = {
   cwd?: string
   command?: string
   stages?: string[]
+  envVars?: { key: string; value: string }[]
   timeOffsetInMs?: number
   items?: ServiceItem[]
   tableName?: string

@@ -9,7 +9,8 @@ import {
   setAutoRefreshInterval,
   getFontFamily
 } from '../settings'
-import { getAwsSdk } from '../getAwsSdk'
+import { getAwsCredentials } from '../getAwsCredentials'
+import { CloudWatchLogs, Lambda } from 'aws-sdk'
 
 export const openLogs = (context: vscode.ExtensionContext) => async (
   treeItem: TreeItem
@@ -93,13 +94,14 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
               })
               return null
             }
-            const AWS = getAwsSdk(
-              service.awsProfile,
-              message.payload.region || service.region
-            )
-            const cloudwatchlogs = new AWS.CloudWatchLogs()
 
             try {
+              const credentials = await getAwsCredentials(service.awsProfile)
+              const cloudwatchlogs = new CloudWatchLogs({
+                credentials,
+                region: message.payload.region || service.region
+              })
+
               const logStreams = await cloudwatchlogs
                 .describeLogStreams({
                   limit: message.payload.limit,
@@ -152,13 +154,16 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 return null
               }
 
-              const AWS = getAwsSdk(
-                treeItem.settings.service.awsProfile,
-                message.payload.region || treeItem.settings.service.region
-              )
-              const cloudwatchlogs = new AWS.CloudWatchLogs()
-
               try {
+                const credentials = await getAwsCredentials(
+                  treeItem.settings.service.awsProfile
+                )
+                const cloudwatchlogs = new CloudWatchLogs({
+                  credentials,
+                  region:
+                    message.payload.region || treeItem.settings.service.region
+                })
+
                 const log = await cloudwatchlogs
                   .getLogEvents({
                     nextToken: message.payload.nextToken,
@@ -197,12 +202,16 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
             }
             break
           case 'getLambdaOverview': {
-            const AWS = getAwsSdk(
-              treeItem.settings.service.awsProfile,
-              message.payload.region || treeItem.settings.service.region
-            )
-            const lambda = new AWS.Lambda()
             try {
+              const credentials = await getAwsCredentials(
+                treeItem.settings.service.awsProfile
+              )
+              const lambda = new Lambda({
+                credentials,
+                region:
+                  message.payload.region || treeItem.settings.service.region
+              })
+
               const lambdaOverview = await lambda
                 .getFunction({
                   FunctionName: message.payload.fnName
@@ -233,13 +242,13 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
             break
           }
           case 'startQuery': {
-            const AWS = getAwsSdk(
-              service.awsProfile,
-              message.payload.region || service.region
-            )
-            const cloudwatchlogs = new AWS.CloudWatchLogs()
-
             try {
+              const credentials = await getAwsCredentials(service.awsProfile)
+              const cloudwatchlogs = new CloudWatchLogs({
+                credentials,
+                region: message.payload.region || service.region
+              })
+
               const { queryId } = await cloudwatchlogs
                 .startQuery({
                   startTime: message.payload.startTime,
@@ -270,13 +279,13 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
             break
           }
           case 'getQueryResults': {
-            const AWS = getAwsSdk(
-              service.awsProfile,
-              message.payload.region || service.region
-            )
-            const cloudwatchlogs = new AWS.CloudWatchLogs()
-
             try {
+              const credentials = await getAwsCredentials(service.awsProfile)
+              const cloudwatchlogs = new CloudWatchLogs({
+                credentials,
+                region: message.payload.region || service.region
+              })
+
               const res = await cloudwatchlogs
                 .getQueryResults({
                   queryId: message.payload.queryId
@@ -303,13 +312,13 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
             break
           }
           case 'stopQuery': {
-            const AWS = getAwsSdk(
-              service.awsProfile,
-              message.payload.region || service.region
-            )
-            const cloudwatchlogs = new AWS.CloudWatchLogs()
-
             try {
+              const credentials = await getAwsCredentials(service.awsProfile)
+              const cloudwatchlogs = new CloudWatchLogs({
+                credentials,
+                region: message.payload.region || service.region
+              })
+
               await cloudwatchlogs
                 .stopQuery({
                   queryId: message.payload.queryId

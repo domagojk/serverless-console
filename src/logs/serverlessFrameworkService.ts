@@ -43,14 +43,47 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
     // and yet after 5+ seconds, stderr returned "socket hang up" error
 
     const commandArr = service.command.split(' ')
-    const child = spawn(commandArr[0], commandArr.slice(1), {
-      cwd: service.cwd
-    })
+
+    const child =
+      service.envVars && service.envVars.length
+        ? spawn(commandArr[0], commandArr.slice(1), {
+            cwd: service.cwd,
+            env: {
+              ...process.env,
+              SLS_WARNING_DISABLE: '*',
+              ...service.envVars.reduce((acc, curr) => {
+                return {
+                  ...acc,
+                  [curr.key]: curr.value
+                }
+              }, {})
+            }
+          })
+        : spawn(commandArr[0], commandArr.slice(1), {
+            cwd: service.cwd,
+            env: {
+              ...process.env,
+              SLS_WARNING_DISABLE: '*'
+            }
+          })
 
     let stdout = ''
     let outputJson = null
     let stdOutEndCalled = false
     const onStdOutEnd = () => {
+      if (!outputJson && stdout) {
+        // try ignoring possible warning messages
+        // by reading output from the first occurance of "service:"
+        const start = stdout.indexOf('service:')
+        if (start !== -1) {
+          try {
+            const output = stdout.slice(start)
+            outputJson = YAML.parse(output)
+          } catch (err) {
+            outputJson = null
+          }
+        }
+      }
       if (stdOutEndCalled === false && outputJson && outputJson.service) {
         stdOutEndCalled = true
         let yml: ServerlessYML = {
@@ -89,8 +122,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
         resolve({
           ...service,
           title: service.title || yml.service.name,
-          region: yml.provider.region,
-          icon: 'serverless-logs.png',
+          region: service.region || yml.provider.region,
           items: Object.keys(yml.functions).map(fnName => {
             const handler = yml.functions[fnName].handler
             const handlerArr = handler.split('/')
@@ -143,6 +175,9 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           })
         })
         child.kill()
+      } else if (outputJson) {
+        stdout = String(outputJson)
+        outputJson = null
       }
     }
 

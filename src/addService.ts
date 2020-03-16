@@ -3,9 +3,10 @@ import { join } from 'path'
 import { loadSharedConfigFiles } from '@aws-sdk/shared-ini-file-loader'
 import { getFontSize, getServiceHash, prepareService } from './settings'
 import { getWebviewContent } from './logs/functionLogsWebview'
-import { getAwsSdk } from './getAwsSdk'
+import { getAwsCredentials } from './getAwsCredentials'
 import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
 import { cloudformationService } from './logs/cloudformationService'
+import { CloudFormation, CloudWatchLogs } from 'aws-sdk'
 
 let panel: vscode.WebviewPanel = null
 
@@ -71,6 +72,7 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
               cwd: message.payload.cwd,
               command: message.payload.print,
               timeOffsetInMs: message.payload.offset * 60000,
+              envVars: message.payload.envVars,
               stages: message.payload.stages
             }
           : message.payload.source === 'cloudformation'
@@ -157,10 +159,13 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
       }
     }
     if (message.command === 'listCloudFormationStacks') {
-      const AWS = getAwsSdk(message.payload.awsProfile, message.payload.region)
-      const cloudFormation = new AWS.CloudFormation()
-
       try {
+        const credentials = await getAwsCredentials(message.payload.awsProfile)
+        const cloudFormation = new CloudFormation({
+          credentials,
+          region: message.payload.region
+        })
+
         const stacks = await cloudFormation.listStacks().promise()
 
         panel.webview.postMessage({
@@ -178,10 +183,13 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
         })
       }
     } else if (message.command === 'describeLogGroups') {
-      const AWS = getAwsSdk(message.payload.awsProfile, message.payload.region)
-      const cloudWatch = new AWS.CloudWatchLogs()
-
       try {
+        const credentials = await getAwsCredentials(message.payload.awsProfile)
+        const cloudWatch = new CloudWatchLogs({
+          credentials,
+          region: message.payload.region
+        })
+
         const res = await cloudWatch.describeLogGroups().promise()
 
         panel.webview.postMessage({
