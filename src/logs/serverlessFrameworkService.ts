@@ -123,6 +123,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           ...service,
           title: service.title || yml.service.name,
           region: service.region || yml.provider.region,
+          icon: 'serverless-logs.png',
           items: Object.keys(yml.functions).map(fnName => {
             const handler = yml.functions[fnName].handler
             const handlerArr = handler.split('/')
