@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { spawn } from 'cross-spawn'
 import * as vscode from 'vscode'
 import * as YAML from 'yaml'
 import * as path from 'path'
@@ -72,6 +72,17 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
             ...service,
             error: 'only aws provider is supported at the moment',
             items: []
+          })
+        }
+
+        if (Array.isArray(yml.functions)) {
+          let functionsArr = yml.functions
+          yml.functions = {}
+          functionsArr.forEach(fun => {
+            yml.functions = {
+              ...yml.functions,
+              ...fun
+            }
           })
         }
 
