@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { join } from 'path'
 import { loadSharedConfigFiles } from '@aws-sdk/shared-ini-file-loader'
 import { getFontSize, getServiceHash, prepareService } from './settings'
-import { getWebviewContent } from './logs/functionLogsWebview'
+import { getWebviewHtml } from './logs/functionLogsWebview'
 import { getAwsCredentials } from './getAwsCredentials'
 import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
 import { cloudformationService } from './logs/cloudformationService'
@@ -37,7 +37,7 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
     .then(res => Object.keys(res.credentialsFile))
     .catch(err => [])
 
-  getWebviewContent({
+  panel.webview.html = await getWebviewHtml({
     panel,
     fontSize: getFontSize(),
     jsFiles: [

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { TreeItem } from '../TreeItem'
 import { join } from 'path'
-import { getWebviewContent } from './functionLogsWebview'
+import { getWebviewHtml } from './functionLogsWebview'
 import {
   getFontSize,
   getGroupPerRequest,
@@ -37,7 +37,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       }
     )
 
-    getWebviewContent({
+    treeItem.panel.webview.html = await getWebviewHtml({
       panel: treeItem.panel,
       fontSize: getFontSize(),
       jsFiles: [

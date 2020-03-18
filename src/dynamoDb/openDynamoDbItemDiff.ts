@@ -4,22 +4,19 @@ import { TreeItem } from '../TreeItem'
 import { TreeDataProvider } from '../treeDataProvider'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { getItem, getFormattedJSON } from './dynamodbService'
 import { readFileSync } from 'fs-extra'
+import { getItem } from './getItem'
+import { getFormattedJSON } from './getFormattedJSON'
 
 export const openDynamoDbItemDiff = (
   context: vscode.ExtensionContext
 ) => async (treeItem: TreeItem) => {
-  const filePath = join(
-    tmpdir(),
-    `vscode-sls-console/${treeItem.settings.service.hash}/scan`,
-    treeItem.label
-  )
+  const filePath = join(treeItem.settings.dir, treeItem.label)
+  const parentDir = treeItem.settings.dir.split('/').pop()
 
   const leftUri = vscode.Uri.parse(
-    `dynamodb-item-diff:${treeItem.settings.service.hash}/scan/${treeItem.label}`
+    `dynamodb-item-diff:${treeItem.settings.service.hash}/${parentDir}/${treeItem.label}`
   )
-
   let rightUri = vscode.Uri.file(filePath)
 
   if (treeItem.label.startsWith('delete-')) {
@@ -43,6 +40,9 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
     }
 
     const [serviceHash, query, fileName] = uri.path.split('/')
+    const querySplitted = query.split('-')
+    querySplitted.shift() // first item removed
+    const index = querySplitted.join('-') // rest is joined
 
     const service = this.treeDataProvider.services.find(
       s => s.hash === serviceHash
@@ -74,12 +74,19 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
       return 'Unable to parse JSON file'
     }
 
+    const indexDetails = service.context.indexes.find(({ id }) => id === index)
+
+    if (!indexDetails) {
+      return 'Unable to getItem'
+    }
+
     try {
-      const item = await getItem(
+      const item = await getItem({
+        index,
         service,
-        json[service.context.hashKey],
-        json[service.context.sortKey]
-      )
+        hashKey: json[indexDetails.keys[0]],
+        rangeKey: json[indexDetails.keys[1]]
+      })
 
       const columns = uniq([...Object.keys(json), ...Object.keys(item)])
 

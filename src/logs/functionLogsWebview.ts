@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 
-export async function getWebviewContent({
+export async function getWebviewHtml({
   fontSize,
   panel,
   jsFiles,
@@ -24,7 +24,7 @@ export async function getWebviewContent({
 
   const cspSource = panel.webview.cspSource
 
-  panel.webview.html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="utf-8" />
