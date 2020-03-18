@@ -29,6 +29,7 @@ export type ServiceItem = {
     command: string
     title: string
   }
+  dir?: string
   collapsibleState?: vscode.TreeItemCollapsibleState
   items?: ServiceItem[]
 }
@@ -60,6 +61,10 @@ export type Service = {
     tableDescribeOutput?: DynamoDB.TableDescription
     hashKey?: string
     sortKey?: string
+    indexes?: {
+      id: string
+      keys: string[]
+    }[]
   }
 }
 
@@ -67,6 +72,7 @@ export type DynamoDbFileChange = {
   name: string
   compositKey: string
   modified: number
+  dir: string
 }
 
 export async function activate(context: vscode.ExtensionContext) {

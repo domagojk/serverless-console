@@ -24,6 +24,7 @@ export class TreeItem extends vscode.TreeItem {
         title: string
       }
       localSrc?: vscode.Uri
+      dir?: string // dynamodb change file directory path
     },
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly command?: vscode.Command
@@ -51,7 +52,7 @@ export class TreeItem extends vscode.TreeItem {
   }
 
   get description(): string {
-    if (this.settings.description) {
+    if (this.settings?.description) {
       return this.settings.description
     }
   }

@@ -123,6 +123,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
           {
             extensionPath: this.extensionPath,
             ...element.settings,
+            dir: item.dir,
             isService: false,
             label: item.title,
             localSrc: item.uri,
