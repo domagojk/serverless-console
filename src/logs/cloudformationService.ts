@@ -1,4 +1,4 @@
-import { Service } from '../extension'
+import { Service } from '../types'
 import * as YAML from 'yaml'
 import { CloudFormation } from 'aws-sdk'
 import { getAwsCredentials } from '../getAwsCredentials'

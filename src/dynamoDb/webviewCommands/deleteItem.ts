@@ -1,8 +1,9 @@
-import { Service } from '../../extension'
+import { Service } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
 import { writeFile } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { getTableDetails } from '../getTableDescription'
 
 export async function deleteItem(service: Service, { sortKey, hashKey }) {
   const compositKey = sortKey === undefined ? hashKey : `${hashKey}-${sortKey}`
@@ -15,18 +16,20 @@ export async function deleteItem(service: Service, { sortKey, hashKey }) {
     fileName
   )
 
+  const tableDetails = await getTableDetails(service)
+
   const { stringified } = getFormattedJSON(
-    service.context.sortKey
+    tableDetails.sortKey
       ? {
-          [service.context.hashKey]: hashKey,
-          [service.context.sortKey]: sortKey
+          [tableDetails.hashKey]: hashKey,
+          [tableDetails.sortKey]: sortKey,
         }
       : {
-          [service.context.hashKey]: hashKey
+          [tableDetails.hashKey]: hashKey,
         }
   )
 
-  await new Promise(resolve =>
+  await new Promise((resolve) =>
     writeFile(localDocPath, stringified, () => {
       resolve()
     })

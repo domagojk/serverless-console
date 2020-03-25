@@ -1,19 +1,15 @@
-import { Service, DynamoDbFileChange } from '../extension'
+import { Service, DynamoDbFileChange } from '../types'
 import { TreeItemCollapsibleState, EventEmitter } from 'vscode'
 import { readdir, statSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { getTableDescription } from './getTableDescription'
+import { getTableDetails } from './getTableDescription'
 
 export async function dynamoDbService(service: Service): Promise<Service> {
   const basePath = join(tmpdir(), `vscode-sls-console/${service.hash}`)
   const numOfPrevChanges = service?.context?.changes?.length
 
-  if (!service.context?.tableDescribeOutput) {
-    service.context = await getTableDescription(service)
-  }
-
-  const queries: string[] = await new Promise(resolve => {
+  const queries: string[] = await new Promise((resolve) => {
     readdir(basePath, (err, files) => {
       if (err) {
         return resolve([])
@@ -22,11 +18,13 @@ export async function dynamoDbService(service: Service): Promise<Service> {
     })
   })
 
+  const tableDetails = await getTableDetails(service)
+
   let folderListForAll: DynamoDbFileChange[] = []
   for (const query of queries) {
     const queryPath = `${basePath}/${query}`
     const folderListForQuery: DynamoDbFileChange[] = await new Promise(
-      resolve =>
+      (resolve) =>
         readdir(queryPath, (err, files) => {
           if (err) {
             return resolve([])
@@ -34,19 +32,19 @@ export async function dynamoDbService(service: Service): Promise<Service> {
           resolve(
             files
               .filter(
-                file => !file.startsWith('get-') && file.endsWith('.json')
+                (file) => !file.startsWith('get-') && file.endsWith('.json')
               )
-              .map(file => {
+              .map((file) => {
                 let compositKey = file.slice(7, file.length - 5)
 
                 if (file.startsWith('create-')) {
                   try {
                     const createData = require(`${queryPath}/${file}`)
-                    compositKey = service.context.sortKey
-                      ? `${createData[service.context.hashKey]}-${
-                          createData[service.context.sortKey]
+                    compositKey = tableDetails.sortKey
+                      ? `${createData[tableDetails.hashKey]}-${
+                          createData[tableDetails.sortKey]
                         }`
-                      : createData[service.context.hashKey]
+                      : createData[tableDetails.hashKey]
                   } catch (err) {
                     console.log(err)
                   }
@@ -56,7 +54,7 @@ export async function dynamoDbService(service: Service): Promise<Service> {
                   dir: queryPath,
                   compositKey,
                   name: file,
-                  modified: statSync(`${queryPath}/${file}`).mtime.getTime()
+                  modified: statSync(`${queryPath}/${file}`).mtime.getTime(),
                 }
               })
           )
@@ -75,9 +73,7 @@ export async function dynamoDbService(service: Service): Promise<Service> {
     context: {
       changes: folderListForAll,
       onChangesUpdated: service.context?.onChangesUpdated || new EventEmitter(),
-      hashKey: service.context?.hashKey,
-      sortKey: service.context?.sortKey,
-      indexes: service.context?.indexes
+      _tableDetailsCached: tableDetails,
     },
     icon: 'dynamodb',
     items: [
@@ -86,13 +82,13 @@ export async function dynamoDbService(service: Service): Promise<Service> {
         icon: 'dynamoDb-items',
         command: {
           command: 'serverlessConsole.openDynamoDb',
-          title: 'Open DynamoDB Table'
-        }
+          title: 'Open DynamoDB Table',
+        },
       },
       {
         title: 'Saved Queries',
         icon: 'star-full',
-        collapsibleState: TreeItemCollapsibleState.Collapsed
+        collapsibleState: TreeItemCollapsibleState.Collapsed,
       },
       {
         title: folderListForAll.length
@@ -103,7 +99,7 @@ export async function dynamoDbService(service: Service): Promise<Service> {
           numOfPrevChanges === folderListForAll.length
             ? TreeItemCollapsibleState.Collapsed
             : TreeItemCollapsibleState.Expanded,
-        items: folderListForAll.map(file => {
+        items: folderListForAll.map((file) => {
           return {
             title: file.name,
             icon: file.name.startsWith('update-')
@@ -116,11 +112,11 @@ export async function dynamoDbService(service: Service): Promise<Service> {
             dir: file.dir,
             command: {
               command: 'serverlessConsole.openDynamoDbItemDiff',
-              title: 'Open DynamoDB Item Diff'
-            }
+              title: 'Open DynamoDB Item Diff',
+            },
           }
-        })
-      }
-    ]
+        }),
+      },
+    ],
   }
 }

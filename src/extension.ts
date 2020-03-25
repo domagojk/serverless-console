@@ -8,72 +8,10 @@ import { openLogs } from './logs/openLogs'
 import { openDynamoDb } from './dynamoDb/openDynamoDb'
 import {
   openDynamoDbItemDiff,
-  DynamoDiffProvider
+  DynamoDiffProvider,
 } from './dynamoDb/openDynamoDbItemDiff'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { DynamoDB } from 'aws-sdk'
-
-export type ServiceItem = {
-  title?: string
-  description?: string
-  uri?: any
-  tabs?: {
-    title: string
-    logs?: string
-    lambda?: string
-    region?: string
-  }[]
-  icon?: string
-  command?: {
-    command: string
-    title: string
-  }
-  dir?: string
-  collapsibleState?: vscode.TreeItemCollapsibleState
-  items?: ServiceItem[]
-}
-
-export type Service = {
-  type: 'serverlessFramework' | 'custom' | 'cloudformation' | 'dynamodb'
-  hash: string
-  stacks?: {
-    stackName: string
-    stage: string
-    region?: string
-  }[]
-  icon?: string
-  awsProfile?: string
-  region?: string
-  isLoading?: boolean
-  error?: any
-  title?: string
-  cwd?: string
-  command?: string
-  stages?: string[]
-  envVars?: { key: string; value: string }[]
-  timeOffsetInMs?: number
-  items?: ServiceItem[]
-  tableName?: string
-  context?: {
-    changes?: DynamoDbFileChange[]
-    onChangesUpdated?: vscode.EventEmitter<DynamoDbFileChange[]>
-    tableDescribeOutput?: DynamoDB.TableDescription
-    hashKey?: string
-    sortKey?: string
-    indexes?: {
-      id: string
-      keys: string[]
-    }[]
-  }
-}
-
-export type DynamoDbFileChange = {
-  name: string
-  compositKey: string
-  modified: number
-  dir: string
-}
 
 export async function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
@@ -82,7 +20,7 @@ export async function activate(context: vscode.ExtensionContext) {
       new TreeDataProvider({
         services: [],
         noFolder: true,
-        extensionPath: context.extensionPath
+        extensionPath: context.extensionPath,
       })
     )
     return null
@@ -94,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Tree Provider instances
   const treeDataProvider = new TreeDataProvider({
     services,
-    extensionPath: context.extensionPath
+    extensionPath: context.extensionPath,
   })
 
   // register tree data providers
@@ -114,14 +52,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   let webviewErroPanel: vscode.WebviewPanel = null
 
-  vscode.commands.registerCommand('slsConsoleTree.showError', async error => {
+  vscode.commands.registerCommand('slsConsoleTree.showError', async (error) => {
     if (!webviewErroPanel) {
       webviewErroPanel = vscode.window.createWebviewPanel(
         'slsConsole-error',
         `Error Output`,
         vscode.ViewColumn.One,
         {
-          enableScripts: false
+          enableScripts: false,
         }
       )
     }
@@ -155,7 +93,7 @@ export async function activate(context: vscode.ExtensionContext) {
   )
 
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration(e => {
+    vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('serverlessConsole.services')) {
         treeDataProvider.refreshServices(getServices())
       }
@@ -168,12 +106,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const dynamoDbTmpFolder = join(tmpdir(), 'vscode-sls-console/')
 
-  vscode.workspace.onDidSaveTextDocument(e => {
+  vscode.workspace.onDidSaveTextDocument((e) => {
     if (e.uri.fsPath.startsWith(dynamoDbTmpFolder)) {
       const relativePart = e.uri.fsPath.substr(dynamoDbTmpFolder.length)
       const [serviceHash, index, item] = relativePart.split('/')
       const service = treeDataProvider.services.find(
-        service => service.hash === serviceHash
+        (service) => service.hash === serviceHash
       )
       if (service) {
         treeDataProvider.refreshService(service)
@@ -191,7 +129,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // handle /scan /orher-index
   // update only modified items like in aws console
-  //   - compare witch items by using getItem in /scan and queryItem with proper values if not scan
   //   - diff similar to vscode in order to figure out dynamodb command (not updating the whole doc, aws console also updates per prop)
 
   // execute dynamodb changes
@@ -200,8 +137,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // opens items for updates
   // every commands pushes message about its status,
   // if there is an error, it can be read in log of the items webvide
-
-  
 
   // num of changes icon (kao za git (2))
 

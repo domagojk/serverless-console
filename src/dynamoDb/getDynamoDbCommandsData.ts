@@ -1,7 +1,7 @@
-import { DynamoDbFileChange } from '../extension'
+import { DynamoDbFileChange } from '../types'
 
 export function getDynamoDbCommandsData(folderList: DynamoDbFileChange[]) {
-  return folderList.map(file => {
+  return folderList.map((file) => {
     return {
       id: Math.random(),
       action: file.name.startsWith('update-')
@@ -12,7 +12,7 @@ export function getDynamoDbCommandsData(folderList: DynamoDbFileChange[]) {
         ? 'create'
         : null,
       compositKey: file.compositKey,
-      timestamp: file.modified
+      timestamp: file.modified,
     }
   })
 }

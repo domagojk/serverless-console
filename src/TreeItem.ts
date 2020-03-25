@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { Service, ServiceItem } from './extension'
+import { Service, ServiceItem } from './types'
 import * as path from 'path'
 
 export class TreeItem extends vscode.TreeItem {

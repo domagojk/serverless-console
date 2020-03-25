@@ -1,12 +1,13 @@
-import { Service } from '../../extension'
+import { Service } from '../../types'
 import * as vscode from 'vscode'
 import { getFormattedJSON } from '../getFormattedJSON'
 import { existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { getTableDetails } from '../getTableDescription'
 
 export async function editItem(service: Service, message: any) {
-  const { sortKey, hashKey } = service.context
+  const { sortKey, hashKey } = await getTableDetails(service)
 
   const { json, stringified, space } = getFormattedJSON(
     message.payload.content,
@@ -50,7 +51,7 @@ export async function editItem(service: Service, message: any) {
     return
   }
 
-  editor.edit(edit => {
+  editor.edit((edit) => {
     edit.insert(new vscode.Position(0, 0), stringified)
     if (!shouldSelectProperty) {
       // if there is no text that should be selected
@@ -93,11 +94,11 @@ function getEditorSelection(
   const splitted = doc.getText().split(/\r?\n/)
 
   const propStart = `${space}"${selectColumn}":`
-  const lineStart = splitted.findIndex(ln => ln.startsWith(propStart))
+  const lineStart = splitted.findIndex((ln) => ln.startsWith(propStart))
   const lineEnd =
     splitted
       .slice(lineStart + 1)
-      .findIndex(ln => ln.startsWith(`${space}"`) || ln.startsWith('}')) +
+      .findIndex((ln) => ln.startsWith(`${space}"`) || ln.startsWith('}')) +
     lineStart
 
   if (lineStart < 0 || lineEnd < 0) {

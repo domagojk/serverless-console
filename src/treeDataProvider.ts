@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { TreeItem } from './TreeItem'
-import { Service } from './extension'
+import { Service } from './types'
 import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
 import { cloudformationService } from './logs/cloudformationService'
 import { dynamoDbService } from './dynamoDb/dynamodbService'

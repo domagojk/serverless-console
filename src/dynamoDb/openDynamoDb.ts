@@ -4,7 +4,10 @@ import { TreeDataProvider } from '../treeDataProvider'
 import { join } from 'path'
 import { getWebviewHtml } from '../logs/functionLogsWebview'
 import { getFontSize, getFontFamily } from '../settings'
-import { getTableDescription } from './getTableDescription'
+import {
+  getDynamoDbServiceContext,
+  getTableDetails,
+} from './getTableDescription'
 import { fetchItems } from './webviewCommands/fetchItems'
 import { createItem } from './webviewCommands/createItem'
 import { deleteItem } from './webviewCommands/deleteItem'
@@ -34,7 +37,7 @@ export const openDynamoDb = (
         enableFindWidget: true,
         retainContextWhenHidden: true,
         enableScripts: true,
-        localResourceRoots: [localResourceRoot]
+        localResourceRoots: [localResourceRoot],
       }
     )
 
@@ -44,11 +47,11 @@ export const openDynamoDb = (
       jsFiles: [
         vscode.Uri.file(join(extesionPath, staticJs, 'main1.js')),
         vscode.Uri.file(join(extesionPath, staticJs, 'main2.js')),
-        vscode.Uri.file(join(extesionPath, staticJs, 'main3.js'))
+        vscode.Uri.file(join(extesionPath, staticJs, 'main3.js')),
       ],
       cssFiles: [
         vscode.Uri.file(join(extesionPath, staticCss, 'main1.css')),
-        vscode.Uri.file(join(extesionPath, staticCss, 'main2.css'))
+        vscode.Uri.file(join(extesionPath, staticCss, 'main2.css')),
       ],
       inlineJs: `
         document.vscodeData = {
@@ -56,7 +59,7 @@ export const openDynamoDb = (
           fontSize: "${getFontSize()}",
           fontFamily: "${getFontFamily()}"
         }
-      `
+      `,
     })
 
     if (treeItem.iconPathObj) {
@@ -67,16 +70,16 @@ export const openDynamoDb = (
         ),
         dark: vscode.Uri.file(
           '/Users/domagojkriskovic/web/serverless-monitor/resources/dark/dynamoDb.svg'
-        )
+        ),
       }
     }
 
-    service.context?.onChangesUpdated?.event(changes => {
+    service.context?.onChangesUpdated?.event((changes) => {
       const commands = getDynamoDbCommandsData(changes)
 
       treeItem.panel?.webview?.postMessage({
         type: 'defineDynamoDbCommands',
-        payload: commands
+        payload: commands,
       })
 
       treeItem.panel.title = changes.length
@@ -85,16 +88,14 @@ export const openDynamoDb = (
     })
 
     treeItem.panel.webview.onDidReceiveMessage(
-      async message => {
+      async (message) => {
         switch (message.command) {
           case 'describeTable': {
-            if (!service.context?.tableDescribeOutput) {
-              service.context = await getTableDescription(service)
-            }
+            const tableDetails = await getTableDetails(service)
 
             treeItem.panel?.webview?.postMessage({
               messageId: message.messageId,
-              payload: service.context.tableDescribeOutput
+              payload: tableDetails.descOutput,
             })
 
             break
@@ -104,7 +105,7 @@ export const openDynamoDb = (
 
             treeItem.panel?.webview?.postMessage({
               messageId: message.messageId,
-              payload
+              payload,
             })
 
             break
@@ -118,7 +119,7 @@ export const openDynamoDb = (
 
             treeItem.panel?.webview?.postMessage({
               type: 'defineDynamoDbCommands',
-              payload: commands
+              payload: commands,
             })
 
             treeItem.panel.title = service.context.changes.length

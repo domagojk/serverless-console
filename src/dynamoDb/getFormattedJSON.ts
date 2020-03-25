@@ -4,7 +4,7 @@ export function getFormattedJSON(data: any, columns?: string[]) {
   let json = {}
 
   if (columns) {
-    columns.forEach(column => {
+    columns.forEach((column) => {
       if (data[column] !== undefined) {
         json[column] = data[column]
       }

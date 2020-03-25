@@ -2,8 +2,8 @@ import { spawn } from 'cross-spawn'
 import * as vscode from 'vscode'
 import * as YAML from 'yaml'
 import * as path from 'path'
+import { Service } from '../types'
 import { readdirSync } from 'fs'
-import { Service } from '../extension'
 
 export type ServerlessYML = {
   org: string

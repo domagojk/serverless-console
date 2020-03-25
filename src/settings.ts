@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
-import { Service } from './extension'
+import { Service } from './types'
 import { existsSync } from 'fs'
 import { createHash } from 'crypto'
 
