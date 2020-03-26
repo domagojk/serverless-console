@@ -1,6 +1,6 @@
-import { DynamoDbFileChange } from '../types'
+import { DynamoDbFileChange } from '../../types'
 
-export function getDynamoDbCommandsData(folderList: DynamoDbFileChange[]) {
+export function defineDynamoDbCommands(folderList: DynamoDbFileChange[]) {
   return folderList.map((file) => {
     return {
       id: Math.random(),

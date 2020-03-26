@@ -59,9 +59,11 @@ export async function dynamoDbService(service: Service): Promise<Service> {
               })
           )
         })
-    ).then((items: any) => items.sort((a, b) => a.modified - b.modified))
+    )
 
-    folderListForAll = [...folderListForAll, ...folderListForQuery]
+    folderListForAll = [...folderListForAll, ...folderListForQuery].sort(
+      (a, b) => a.modified - b.modified
+    )
   }
 
   if (service?.context?.onChangesUpdated) {

@@ -16,7 +16,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   constructor({
     services = [],
     noFolder,
-    extensionPath
+    extensionPath,
   }: {
     services: Service[]
     noFolder?: boolean
@@ -39,10 +39,10 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
             {
               extensionPath: this.extensionPath,
               label: 'You have not yet opened a folder.',
-              isService: true
+              isService: true,
             },
             vscode.TreeItemCollapsibleState.None
-          )
+          ),
         ]
       }
 
@@ -57,18 +57,18 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
             {
               extensionPath: this.extensionPath,
               label: 'Click to add a service...',
-              isService: true
+              isService: true,
             },
             vscode.TreeItemCollapsibleState.None,
             {
               command: 'serverlessConsole.addService',
               title: 'Add a service',
-              arguments: []
+              arguments: [],
             }
-          )
+          ),
         ]
       }
-      return this.services.map(service => {
+      return this.services.map((service) => {
         if (service.isLoading) {
           return new TreeItem(
             {
@@ -76,7 +76,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
               label: service.title || `executing "${service.command}"...`,
               icon: 'loading',
               isService: true,
-              service
+              serviceHash: service.hash,
             },
             collapsibleState
           )
@@ -91,13 +91,13 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
                 : service.title,
               isService: true,
               icon: 'error',
-              service
+              serviceHash: service.hash,
             },
             vscode.TreeItemCollapsibleState.None,
             {
               command: 'slsConsoleTree.showError',
               title: 'show error',
-              arguments: [service.error]
+              arguments: [service.error],
             }
           )
         }
@@ -108,17 +108,18 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
             label: service.title,
             icon: service.icon,
             isService: true,
-            service
+            serviceHash: service.hash,
           },
           collapsibleState
         )
       })
     } else {
+      const service = this.getService(element.settings.serviceHash)
       const items = element.settings.isService
-        ? element.settings.service?.items
+        ? service?.items
         : element.settings?.serviceItem?.items
 
-      return items?.map(item => {
+      return items?.map((item) => {
         return new TreeItem(
           {
             extensionPath: this.extensionPath,
@@ -130,7 +131,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
             description: item.description,
             serviceItem: item,
             icon: item.icon,
-            command: item.command
+            command: item.command,
           },
           item.collapsibleState ?? vscode.TreeItemCollapsibleState.None
         )
@@ -139,15 +140,15 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   }
 
   refreshServices(services: Service[], options?: { refreshAll?: boolean }) {
-    this.services = services.map(newService => {
+    this.services = services.map((newService) => {
       // adding "isLoading" to all services that have changed
       // or if "refreshAll" is used, all services are refresh no matter if the hash changed
-      const oldService = this.services.find(s => s.hash === newService.hash)
+      const oldService = this.services.find((s) => s.hash === newService.hash)
 
       if (options?.refreshAll || !oldService) {
         return {
           ...newService,
-          isLoading: newService.type === 'custom' ? false : true
+          isLoading: newService.type === 'custom' ? false : true,
         }
       } else {
         return oldService
@@ -159,8 +160,8 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
     // when handler is done, service is updated (mutated this.services by finding the hash)
     return Promise.all(
       this.services
-        .filter(s => s.isLoading)
-        .map(service => {
+        .filter((s) => s.isLoading)
+        .map((service) => {
           this.refreshService(service)
         })
     )
@@ -180,7 +181,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       const updatedService = await handler(service)
       this.mutateServiceByHash({
         ...updatedService,
-        isLoading: false
+        isLoading: false,
       })
       return updatedService
     }
@@ -189,7 +190,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   }
 
   mutateServiceByHash(service: Service) {
-    this.services = this.services.map(s => {
+    this.services = this.services.map((s) => {
       if (s.hash === service.hash) {
         return service
       } else {
@@ -197,5 +198,9 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       }
     })
     this._onDidChangeTreeData.fire()
+  }
+
+  getService(serviceHash: string) {
+    return this.services.find((s) => s.hash === serviceHash)
   }
 }

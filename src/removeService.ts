@@ -8,8 +8,8 @@ export function removeService(treeItem: TreeItem) {
 
   vscode.workspace.getConfiguration().update(
     'serverlessConsole.services',
-    currentServices.filter(s => {
-      return getServiceHash(s) !== treeItem.settings?.service?.hash
+    currentServices.filter((s) => {
+      return getServiceHash(s) !== treeItem.settings?.serviceHash
     })
   )
 }

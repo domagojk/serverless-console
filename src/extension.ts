@@ -79,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.registerCommand(
     'serverlessConsole.openLogs',
-    openLogs(context)
+    openLogs(context, treeDataProvider)
   )
 
   vscode.commands.registerCommand(
@@ -89,7 +89,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.registerCommand(
     'serverlessConsole.openDynamoDbItemDiff',
-    openDynamoDbItemDiff(context)
+    openDynamoDbItemDiff(context, treeDataProvider)
   )
 
   context.subscriptions.push(

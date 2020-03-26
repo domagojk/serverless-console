@@ -16,7 +16,7 @@ export class TreeItem extends vscode.TreeItem {
       isService: boolean
       label: string
       icon?: string
-      service?: Service
+      serviceHash?: string
       serviceItem?: ServiceItem
       description?: string
       command?: {

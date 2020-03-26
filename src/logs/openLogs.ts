@@ -7,18 +7,19 @@ import {
   getGroupPerRequest,
   getAutoRefreshInterval,
   setAutoRefreshInterval,
-  getFontFamily
+  getFontFamily,
 } from '../settings'
 import { getAwsCredentials } from '../getAwsCredentials'
 import { CloudWatchLogs, Lambda } from 'aws-sdk'
+import { TreeDataProvider } from '../treeDataProvider'
 
-export const openLogs = (context: vscode.ExtensionContext) => async (
-  treeItem: TreeItem
-) => {
+export const openLogs = (
+  context: vscode.ExtensionContext,
+  treeDataProvider: TreeDataProvider
+) => async (treeItem: TreeItem) => {
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const extesionPath = context.extensionPath
-  const service = treeItem.settings.service
 
   const localResourceRoot = vscode.Uri.file(
     join(extesionPath, 'resources/webview')
@@ -33,7 +34,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
         enableFindWidget: true,
         retainContextWhenHidden: true,
         enableScripts: true,
-        localResourceRoots: [localResourceRoot]
+        localResourceRoots: [localResourceRoot],
       }
     )
 
@@ -43,11 +44,11 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       jsFiles: [
         vscode.Uri.file(join(extesionPath, staticJs, 'main1.js')),
         vscode.Uri.file(join(extesionPath, staticJs, 'main2.js')),
-        vscode.Uri.file(join(extesionPath, staticJs, 'main3.js'))
+        vscode.Uri.file(join(extesionPath, staticJs, 'main3.js')),
       ],
       cssFiles: [
         vscode.Uri.file(join(extesionPath, staticCss, 'main1.css')),
-        vscode.Uri.file(join(extesionPath, staticCss, 'main2.css'))
+        vscode.Uri.file(join(extesionPath, staticCss, 'main2.css')),
       ],
       inlineJs: `
         document.vscodeData = {
@@ -58,20 +59,24 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           fontFamily: "${getFontFamily()}",
           tabs: ${JSON.stringify(treeItem.settings.serviceItem.tabs)}
         }
-      `
+      `,
     })
 
     if (treeItem.iconPathObj) {
       treeItem.panel.iconPath = {
         light: vscode.Uri.file(treeItem.iconPathObj.light),
-        dark: vscode.Uri.file(treeItem.iconPathObj.dark)
+        dark: vscode.Uri.file(treeItem.iconPathObj.dark),
       }
     }
 
     const autoRefreshEnabledVal = getAutoRefreshInterval() || 5000
 
     treeItem.panel.webview.onDidReceiveMessage(
-      async message => {
+      async (message) => {
+        const service = treeDataProvider.getService(
+          treeItem.settings.serviceHash
+        )
+
         switch (message.command) {
           case 'setAutoRefresh': {
             const newVal = message.payload.enabled ? autoRefreshEnabledVal : 0
@@ -79,8 +84,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
             treeItem.panel?.webview?.postMessage({
               messageId: message.messageId,
               payload: {
-                autoRefreshInterval: newVal
-              }
+                autoRefreshInterval: newVal,
+              },
             })
             break
           }
@@ -89,8 +94,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
               treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
                 payload: {
-                  ignore: true
-                }
+                  ignore: true,
+                },
               })
               return null
             }
@@ -99,7 +104,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
               const credentials = await getAwsCredentials(service.awsProfile)
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region
+                region: message.payload.region || service.region,
               })
 
               const logStreams = await cloudwatchlogs
@@ -108,7 +113,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                   orderBy: 'LastEventTime',
                   nextToken: message.payload.nextToken,
                   descending: true,
-                  logGroupName: message.payload.logGroupName
+                  logGroupName: message.payload.logGroupName,
                 })
                 .promise()
 
@@ -116,7 +121,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 messageId: message.messageId,
                 payload: {
                   nextToken: logStreams.nextToken,
-                  logStreams: logStreams.logStreams.map(logStream => {
+                  logStreams: logStreams.logStreams.map((logStream) => {
                     const timestamp =
                       logStream.lastEventTimestamp || logStream.creationTime
 
@@ -124,10 +129,10 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                       ...logStream,
                       sortByTimestamp: service.timeOffsetInMs
                         ? timestamp + service.timeOffsetInMs
-                        : timestamp
+                        : timestamp,
                     }
-                  })
-                }
+                  }),
+                },
               })
             } catch (err) {
               treeItem.panel?.webview?.postMessage({
@@ -136,8 +141,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                   error:
                     err && err.message
                       ? err.message
-                      : 'error retriving log streams'
-                }
+                      : 'error retriving log streams',
+                },
               })
             }
             break
@@ -148,27 +153,24 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 treeItem.panel?.webview?.postMessage({
                   messageId: message.messageId,
                   payload: {
-                    ignore: true
-                  }
+                    ignore: true,
+                  },
                 })
                 return null
               }
 
               try {
-                const credentials = await getAwsCredentials(
-                  treeItem.settings.service.awsProfile
-                )
+                const credentials = await getAwsCredentials(service.awsProfile)
                 const cloudwatchlogs = new CloudWatchLogs({
                   credentials,
-                  region:
-                    message.payload.region || treeItem.settings.service.region
+                  region: message.payload.region || service.region,
                 })
 
                 const log = await cloudwatchlogs
                   .getLogEvents({
                     nextToken: message.payload.nextToken,
                     logGroupName: message.payload.logGroup,
-                    logStreamName: message.payload.logStream
+                    logStreamName: message.payload.logStream,
                   })
                   .promise()
 
@@ -176,17 +178,17 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                   messageId: message.messageId,
                   payload: {
                     functionName: treeItem.label,
-                    logEvents: log.events.map(log => {
+                    logEvents: log.events.map((log) => {
                       return {
                         ...log,
                         timestamp: service.timeOffsetInMs
                           ? log.timestamp + service.timeOffsetInMs
-                          : log.timestamp
+                          : log.timestamp,
                       }
                     }),
                     nextBackwardToken: log.nextBackwardToken,
-                    nextForwardToken: log.nextForwardToken
-                  }
+                    nextForwardToken: log.nextForwardToken,
+                  },
                 })
               } catch (err) {
                 treeItem.panel?.webview?.postMessage({
@@ -195,26 +197,23 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                     error:
                       err && err.message
                         ? err.message
-                        : 'error retriving log events'
-                  }
+                        : 'error retriving log events',
+                  },
                 })
               }
             }
             break
           case 'getLambdaOverview': {
             try {
-              const credentials = await getAwsCredentials(
-                treeItem.settings.service.awsProfile
-              )
+              const credentials = await getAwsCredentials(service.awsProfile)
               const lambda = new Lambda({
                 credentials,
-                region:
-                  message.payload.region || treeItem.settings.service.region
+                region: message.payload.region || service.region,
               })
 
               const lambdaOverview = await lambda
                 .getFunction({
-                  FunctionName: message.payload.fnName
+                  FunctionName: message.payload.fnName,
                 })
                 .promise()
 
@@ -225,8 +224,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                   lastModified: lambdaOverview.Configuration.LastModified,
                   memorySize: lambdaOverview.Configuration.MemorySize,
                   runtime: lambdaOverview.Configuration.Runtime,
-                  timeout: lambdaOverview.Configuration.Timeout
-                }
+                  timeout: lambdaOverview.Configuration.Timeout,
+                },
               })
             } catch (err) {
               treeItem.panel?.webview?.postMessage({
@@ -235,8 +234,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                   error:
                     err && err.message
                       ? err.message
-                      : 'error retriving function overview'
-                }
+                      : 'error retriving function overview',
+                },
               })
             }
             break
@@ -246,7 +245,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
               const credentials = await getAwsCredentials(service.awsProfile)
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region
+                region: message.payload.region || service.region,
               })
 
               const { queryId } = await cloudwatchlogs
@@ -254,7 +253,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                   startTime: message.payload.startTime,
                   endTime: message.payload.endTime,
                   queryString: message.payload.query,
-                  logGroupName: message.payload.logGroupName
+                  logGroupName: message.payload.logGroupName,
                 })
                 .promise()
 
@@ -263,8 +262,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 stream: true,
                 payload: {
                   ref: message.payload.ref,
-                  queryId
-                }
+                  queryId,
+                },
               })
             } catch (err) {
               console.log(err)
@@ -272,8 +271,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 messageId: message.messageId,
                 payload: {
                   error:
-                    err && err.message ? err.message : 'error querying logs'
-                }
+                    err && err.message ? err.message : 'error querying logs',
+                },
               })
             }
             break
@@ -283,12 +282,12 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
               const credentials = await getAwsCredentials(service.awsProfile)
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region
+                region: message.payload.region || service.region,
               })
 
               const res = await cloudwatchlogs
                 .getQueryResults({
-                  queryId: message.payload.queryId
+                  queryId: message.payload.queryId,
                 })
                 .promise()
 
@@ -296,8 +295,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 messageId: message.messageId,
                 payload: {
                   ...res,
-                  ref: message.payload.ref
-                }
+                  ref: message.payload.ref,
+                },
               })
             } catch (err) {
               console.log(err)
@@ -305,8 +304,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
                 messageId: message.messageId,
                 payload: {
                   error:
-                    err && err.message ? err.message : 'error querying logs'
-                }
+                    err && err.message ? err.message : 'error querying logs',
+                },
               })
             }
             break
@@ -316,23 +315,23 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
               const credentials = await getAwsCredentials(service.awsProfile)
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region
+                region: message.payload.region || service.region,
               })
 
               await cloudwatchlogs
                 .stopQuery({
-                  queryId: message.payload.queryId
+                  queryId: message.payload.queryId,
                 })
                 .promise()
 
               treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
-                payload: {}
+                payload: {},
               })
             } catch (err) {
               treeItem.panel?.webview?.postMessage({
                 messageId: message.messageId,
-                payload: {}
+                payload: {},
               })
             }
             break
