@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.5.12]
+- Fixed bug with missing region when using CloudWatch Insights
+
 ## [0.5.11]
 - Added support for AWS profiles using assumed role (issue #11)
 
