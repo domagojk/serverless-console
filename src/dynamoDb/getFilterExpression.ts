@@ -23,7 +23,7 @@ export function getFilterExpression(
             f.fieldName && f.value !== undefined && f.valueSecond !== undefined
           )
         default:
-          return f.fieldName && f.value !== undefined
+          return f.fieldName && f.value !== undefined && f.value !== ''
       }
     })
     .map((filter, index) => {

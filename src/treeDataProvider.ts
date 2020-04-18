@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { TreeItem } from './TreeItem'
-import { Service } from './types'
+import { Service, Store } from './types'
 import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
 import { cloudformationService } from './logs/cloudformationService'
 import { dynamoDbService } from './dynamoDb/dynamodbService'
@@ -12,16 +12,20 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   noFolder: boolean
   services: Service[]
   extensionPath: string
+  store: Store
 
   constructor({
+    store,
     services = [],
     noFolder,
     extensionPath,
   }: {
+    store: Store
     services: Service[]
     noFolder?: boolean
     extensionPath: string
   }) {
+    this.store = store
     this.services = services
     this.noFolder = noFolder
     this.extensionPath = extensionPath
@@ -73,7 +77,9 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
           return new TreeItem(
             {
               extensionPath: this.extensionPath,
-              label: service.title || `executing "${service.command}"...`,
+              label: service.command
+                ? service.title || `executing "${service.command}"...`
+                : service.title || '',
               icon: 'loading',
               isService: true,
               serviceHash: service.hash,
@@ -132,6 +138,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
             serviceItem: item,
             icon: item.icon,
             command: item.command,
+            contextValue: item.contextValue,
           },
           item.collapsibleState ?? vscode.TreeItemCollapsibleState.None
         )
@@ -162,12 +169,13 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       this.services
         .filter((s) => s.isLoading)
         .map((service) => {
-          this.refreshService(service)
+          this.refreshService(service.hash)
         })
     )
   }
 
-  async refreshService(service: Service) {
+  async refreshService(serviceHash: string) {
+    const service = this.getService(serviceHash)
     const handler =
       service.type === 'serverlessFramework'
         ? serverlessFrameworkService
@@ -178,7 +186,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
         : null
 
     if (handler) {
-      const updatedService = await handler(service)
+      const updatedService = await handler(service, this.store)
       this.mutateServiceByHash({
         ...updatedService,
         isLoading: false,

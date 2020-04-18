@@ -15,6 +15,7 @@ export class TreeItem extends vscode.TreeItem {
       extensionPath: string
       isService: boolean
       label: string
+      contextValue?: string
       icon?: string
       serviceHash?: string
       serviceItem?: ServiceItem
@@ -30,7 +31,6 @@ export class TreeItem extends vscode.TreeItem {
     public readonly command?: vscode.Command
   ) {
     super(settings.label, collapsibleState)
-    this.contextValue = settings.isService ? 'service' : null
 
     if (settings.icon) {
       this.iconPathObj = getImgPath(settings.extensionPath, settings.icon)
@@ -39,13 +39,20 @@ export class TreeItem extends vscode.TreeItem {
     if (settings.command) {
       this.command = {
         ...settings.command,
-        arguments: [this]
+        arguments: [this],
       }
+    }
+
+    if (settings.contextValue) {
+      this.contextValue = settings.contextValue
+    } else if (settings.localSrc) {
+      this.contextValue = 'function-localRef'
+    } else if (settings.isService) {
+      this.contextValue = 'service'
     }
 
     if (settings.localSrc) {
       this.uri = settings.localSrc
-      this.contextValue = 'function-localRef'
     }
 
     this.iconPath = this.iconPathObj
@@ -63,6 +70,6 @@ function getImgPath(extesionPath: string, name: string) {
 
   return {
     dark: path.join(extesionPath, `resources/dark/${name}${extension}`),
-    light: path.join(extesionPath, `resources/light/${name}${extension}`)
+    light: path.join(extesionPath, `resources/light/${name}${extension}`),
   }
 }

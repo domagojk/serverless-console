@@ -128,10 +128,22 @@
             }
           },
           "description": "'serverless print' command(s) for retriving data about the service"
+        },
+        "serverlessConsole.licenseKey": {
+          "type": "string",
+          "title": "Serverless Console PRO License key"
         }
       }
     },
     "commands": [
+      {
+        "command": "serverlessConsole.dynamodbDiscardChange",
+        "title": "Discard Change"
+      },
+      {
+        "command": "serverlessConsole.dynamodbExecuteChanges",
+        "title": "Execute Changes"
+      },
       {
         "command": "serverlessConsole.refreshEntry",
         "title": "Refresh",
@@ -162,8 +174,7 @@
       },
       {
         "command": "serverlessConsole.update-dynamodb-item",
-        "title": "Update DynamoDB item",
-        "category": ""
+        "title": "Update DynamoDB item"
       },
       {
         "command": "serverlessConsole.delete-dynamodb-item",
@@ -172,6 +183,11 @@
       {
         "command": "serverlessConsole.openDynamoDbItemDiff",
         "title": "Open DynamoDB Item Diff"
+      },
+      {
+        "command": "serverlessConsole.proVersion",
+        "title": "Serverless Console Pro",
+        "enablement": "view == slsConsoleTree"
       }
     ],
     "viewsContainers": {
@@ -202,6 +218,11 @@
           "command": "serverlessConsole.addService",
           "when": "view == slsConsoleTree",
           "group": "navigation"
+        },
+        {
+          "command": "serverlessConsole.proVersion",
+          "when": "view == slsConsoleTree",
+          "group": "2_other@1"
         }
       ],
       "view/item/context": [
@@ -213,6 +234,14 @@
           "command": "serverlessConsole.openFunction",
           "when": "view == slsConsoleTree && viewItem == function-localRef",
           "group": "inline"
+        },
+        {
+          "command": "serverlessConsole.dynamodbDiscardChange",
+          "when": "view == slsConsoleTree && viewItem == dynamodb-change"
+        },
+        {
+          "command": "serverlessConsole.dynamodbExecuteChanges",
+          "when": "view == slsConsoleTree && viewItem == dynamodb-changes"
         }
       ]
     }
@@ -248,12 +277,14 @@
   "dependencies": {
     "@aws-sdk/shared-ini-file-loader": "0.1.0-preview.1",
     "aws-sdk": "^2.541.0",
+    "axios": "^0.19.2",
     "cross-spawn": "^7.0.1",
     "deep-object-diff": "^1.1.0",
     "fs-extra": "^8.1.0",
     "jsonc-parser": "^2.2.0",
     "lodash": "^4.17.15",
     "moment": "2.24.0",
+    "node-machine-id": "^1.1.12",
     "yaml": "1.7.0"
   },
   "prettier": {

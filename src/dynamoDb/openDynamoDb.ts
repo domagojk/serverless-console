@@ -4,18 +4,29 @@ import { TreeDataProvider } from '../treeDataProvider'
 import { join } from 'path'
 import { getWebviewHtml } from '../logs/functionLogsWebview'
 import { getFontSize, getFontFamily } from '../settings'
-import { getTableDetails } from './getTableDescription'
 import { fetchItems } from './webviewCommands/fetchItems'
 import { createItem } from './webviewCommands/createItem'
 import { deleteItem } from './webviewCommands/deleteItem'
 import { editItem } from './webviewCommands/editItem'
-import { defineDynamoDbCommands } from './webviewCommands/defineDynamoDbCommands'
-import { execute } from './webviewCommands/execute'
+import { executeChanges } from './webviewCommands/executeChanges'
+import { Store } from '../types'
+import { remove } from 'fs-extra'
+import { openDynamoDbChangeDiff } from './openDynamoDbChangeDiff'
+import { dynamoDbOptions } from './webviewCommands/dynamodbOptions'
+import {
+  buyLicense,
+  showProOptions,
+  enterLicense,
+  getLicense,
+} from '../checkLicense'
 
 export const openDynamoDb = (
   context: vscode.ExtensionContext,
-  treeDataProvider: TreeDataProvider
+  treeDataProvider: TreeDataProvider,
+  store: Store
 ) => async (treeItem: TreeItem) => {
+  let license = await getLicense()
+
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const extesionPath = context.extensionPath
@@ -25,16 +36,14 @@ export const openDynamoDb = (
   )
 
   if (!treeItem.panel) {
-    const { title, context: serviceContext } = treeDataProvider.getService(
-      treeItem.settings.serviceHash
-    )
+    const { title } = treeDataProvider.getService(treeItem.settings.serviceHash)
 
     treeItem.panel = vscode.window.createWebviewPanel(
       'slsConsoledynamodb',
       title,
       vscode.ViewColumn.One,
       {
-        enableFindWidget: true,
+        enableFindWidget: false, // cant use it since table is showing items based on scroll
         retainContextWhenHidden: true,
         enableScripts: true,
         localResourceRoots: [localResourceRoot],
@@ -56,6 +65,7 @@ export const openDynamoDb = (
       inlineJs: `
         document.vscodeData = {
           page: 'dynamoDb',
+          license: ${JSON.stringify(license)},
           fontSize: "${getFontSize()}",
           fontFamily: "${getFontFamily()}"
         }
@@ -64,48 +74,39 @@ export const openDynamoDb = (
 
     if (treeItem.iconPathObj) {
       treeItem.panel.iconPath = {
-        // todo: fix svg path
-        light: vscode.Uri.file(
-          '/Users/domagojkriskovic/web/serverless-monitor/resources/light/dynamoDb.svg'
-        ),
         dark: vscode.Uri.file(
-          '/Users/domagojkriskovic/web/serverless-monitor/resources/dark/dynamoDb.svg'
+          join(extesionPath, `resources/dark/dynamoDb.svg`)
+        ),
+        light: vscode.Uri.file(
+          join(extesionPath, `resources/light/dynamoDb.svg`)
         ),
       }
     }
 
-    serviceContext?.onChangesUpdated?.event((changes) => {
-      const commands = defineDynamoDbCommands(changes)
-
+    const subscriber = () => {
       treeItem.panel?.webview?.postMessage({
-        type: 'defineDynamoDbCommands',
-        payload: commands,
+        type: 'changesUpdated',
       })
-
-      treeItem.panel.title = changes.length
-        ? `(${changes.length}) ${title}`
-        : title
-    })
+    }
+    store.subscribe(subscriber, treeItem.settings.serviceHash)
 
     treeItem.panel.webview.onDidReceiveMessage(
       async (message) => {
-        const service = treeDataProvider.getService(
-          treeItem.settings.serviceHash
-        )
+        const serviceState = store.getState(treeItem.settings.serviceHash)
 
         switch (message.command) {
           case 'describeTable': {
-            const tableDetails = await getTableDetails(service)
+            const tableDetails = serviceState.tableDetails
 
             treeItem.panel?.webview?.postMessage({
               messageId: message.messageId,
-              payload: tableDetails.descOutput,
+              payload: tableDetails,
             })
 
             break
           }
           case 'fetchItems': {
-            const payload = await fetchItems(service, message)
+            const payload = await fetchItems(serviceState, message)
 
             treeItem.panel?.webview?.postMessage({
               messageId: message.messageId,
@@ -115,36 +116,55 @@ export const openDynamoDb = (
             break
           }
           case 'createItem': {
-            await createItem(service)
-            break
-          }
-          case 'componentMounted': {
-            const commands = defineDynamoDbCommands(service.context.changes)
-
-            treeItem.panel?.webview?.postMessage({
-              type: 'defineDynamoDbCommands',
-              payload: commands,
-            })
-
-            treeItem.panel.title = service.context.changes.length
-              ? `(${service.context.changes.length}) ${service.title}`
-              : service.title
-
+            await createItem(serviceState, message.payload?.prepopulatedItem)
             break
           }
           case 'deleteItem': {
-            const { sortKey, hashKey } = message.payload
-            await deleteItem(service, { sortKey, hashKey })
-            treeDataProvider.refreshService(service)
-
+            await deleteItem(serviceState, message)
+            treeDataProvider.refreshService(treeItem.settings.serviceHash)
             break
           }
           case 'editItem': {
-            await editItem(service, message)
+            await editItem(serviceState, message)
             break
           }
           case 'execute': {
-            await execute(service)
+            await executeChanges(store, treeItem.settings.serviceHash, () => {
+              treeDataProvider.refreshService(treeItem.settings.serviceHash)
+            })
+            break
+          }
+          case 'discardChange': {
+            const change = serviceState.changes.find(
+              (c) => c.id === message.payload.id
+            )
+            if (change) {
+              await remove(change.absFilePath)
+              treeDataProvider.refreshService(treeItem.settings.serviceHash)
+            }
+            break
+          }
+          case 'openChange': {
+            const change = serviceState.changes.find(
+              (c) => c.id === message.payload.id
+            )
+            openDynamoDbChangeDiff(change)
+            break
+          }
+          case 'dynamodbOptions': {
+            dynamoDbOptions(message, treeItem)
+            break
+          }
+          case 'showLicenseDialog': {
+            showProOptions()
+            break
+          }
+          case 'buyLicense': {
+            buyLicense()
+            break
+          }
+          case 'enterLicense': {
+            enterLicense()
             break
           }
         }
@@ -155,7 +175,7 @@ export const openDynamoDb = (
 
     treeItem.panel.onDidDispose(() => {
       delete treeItem.panel
-      serviceContext?.onChangesUpdated.dispose()
+      store.unsubscribe(subscriber, treeItem.settings.serviceHash)
     })
   }
   treeItem.panel.reveal()

@@ -1,31 +1,37 @@
-import { Service } from '../../types'
 import * as vscode from 'vscode'
-import { getFormattedJSON } from '../getFormattedJSON'
-import { existsSync } from 'fs'
-import { tmpdir } from 'os'
 import { join } from 'path'
-import { getTableDetails } from '../getTableDescription'
+import { ServiceState } from '../../types'
+import { getFormattedJSON } from '../getFormattedJSON'
+import { getLocalItem } from '../getLocalItem'
+import { findExistingChange } from '../findExistingChange'
+import { readFileSync } from 'fs-extra'
 
-export async function editItem(service: Service, message: any) {
-  const { sortKey, hashKey } = await getTableDetails(service)
-
-  const { json, stringified, space } = getFormattedJSON(
-    message.payload.content,
-    message.payload.columns
-  )
-
-  const compositKey = !sortKey
-    ? json[hashKey]
-    : `${json[hashKey]}-${json[sortKey]}`
-
+export async function editItem(serviceState: ServiceState, message: any) {
   const localDirPath = join(
-    tmpdir(),
-    `vscode-sls-console/${service.hash}/${message.payload.queryType}-${message.payload.index}`
+    serviceState.tmpDir,
+    `${message.payload.queryType}-${message.payload.index}`,
+    String(message.payload.hashKey)
   )
-  const localDocPath = join(localDirPath, `update-${compositKey}.json`)
+  const compositKey =
+    message.payload.sortKey !== undefined
+      ? `${message.payload.hashKey}-${message.payload.sortKey}`
+      : message.payload.hashKey
 
-  const doesFileExists = existsSync(localDocPath)
-  const uri = doesFileExists
+  // using randSufix as filename end because vscode already exists
+  // alert even after file is removed from disc (probably the file is stored in cache)
+  const randSufix = String(Math.round(Math.random() * 10000)).padStart(4, '0')
+
+  const existingChange = await findExistingChange(
+    localDirPath,
+    `update-${compositKey}`
+  )
+
+  const localDocPath = join(
+    localDirPath,
+    existingChange ? existingChange : `update-${compositKey}.${randSufix}.json`
+  )
+
+  const uri = existingChange
     ? vscode.Uri.file(localDocPath)
     : vscode.Uri.file(localDocPath).with({ scheme: 'untitled' })
 
@@ -35,55 +41,75 @@ export async function editItem(service: Service, message: any) {
     vscode.ViewColumn.Beside
   )
 
-  const shouldSelectProperty =
-    json &&
-    message.payload.selectColumn &&
-    json[message.payload.selectColumn] !== undefined
+  try {
+    let content = existingChange
+      ? getLocalItem(localDocPath)
+      : message.payload.content
 
-  if (doc.getText()) {
-    if (shouldSelectProperty) {
-      editor.selection = getEditorSelection(
-        doc,
-        space,
-        message.payload.selectColumn
-      )
-    }
-    return
-  }
+    let columns = existingChange
+      ? Object.keys(content)
+      : message.payload.columns
 
-  editor.edit((edit) => {
-    edit.insert(new vscode.Position(0, 0), stringified)
-    if (!shouldSelectProperty) {
-      // if there is no text that should be selected
-      // exit the function
-      return
-    }
+    const { json, stringified, space } = getFormattedJSON(content, columns)
 
-    // since it seems there is no vscode api which could indicate
-    // that editing document is done
-    // perform a "dirty" check (max 10 times every 25ms)
-    let selectionTimesTried = 0
-    const selectClickedProperty = () => {
-      selectionTimesTried++
-      if (selectionTimesTried > 10) {
-        return
-      }
+    const shouldSelectProperty =
+      json &&
+      message.payload.selectColumn &&
+      json[message.payload.selectColumn] !== undefined
 
-      if (!doc.getText()) {
-        // doc is not ready yet
-        setTimeout(selectClickedProperty, 25)
-      } else {
-        // doc is ready
+    if (doc.getText()) {
+      if (shouldSelectProperty) {
         editor.selection = getEditorSelection(
           doc,
           space,
           message.payload.selectColumn
         )
+      }
+      return
+    }
+
+    editor.edit((edit) => {
+      edit.insert(new vscode.Position(0, 0), stringified)
+      if (!shouldSelectProperty) {
+        // if there is no text that should be selected
+        // exit the function
         return
       }
+
+      // since it seems there is no vscode api which could indicate
+      // that editing document is done
+      // perform a "dirty" check (max 10 times every 25ms)
+      let selectionTimesTried = 0
+      const selectClickedProperty = () => {
+        selectionTimesTried++
+        if (selectionTimesTried > 10) {
+          return
+        }
+
+        if (!doc.getText()) {
+          // doc is not ready yet
+          setTimeout(selectClickedProperty, 25)
+        } else {
+          // doc is ready
+          editor.selection = getEditorSelection(
+            doc,
+            space,
+            message.payload.selectColumn
+          )
+          return
+        }
+      }
+      selectClickedProperty()
+    })
+  } catch (err) {
+    if (err.code === 'JSON_PARSE_ERROR') {
+      // ignore
+      // since this can only happen to localy saved file,
+      // no need to do any insering or selecting
+    } else {
+      vscode.window.showErrorMessage(`Error editing item. ${err.message}`)
     }
-    selectClickedProperty()
-  })
+  }
 }
 
 function getEditorSelection(
@@ -128,7 +154,7 @@ function getEditorSelection(
 
   if (lastTwoSelected === '",') {
     chEnd = chEnd - 2
-  } else if (lastTwoSelected[1] === ',') {
+  } else if (lastTwoSelected[1] === ',' || lastTwoSelected[1] === '"') {
     chEnd = chEnd - 1
   }
 

@@ -1,24 +1,16 @@
 import * as vscode from 'vscode'
-import { join } from 'path'
-import { TreeItem } from '../TreeItem'
 import { TreeDataProvider } from '../treeDataProvider'
 import { getRemoteItem } from './getRemoteItem'
+import { Store, DynamoDbFileChange } from '../types'
 
-export const openDynamoDbItemDiff = (
-  context: vscode.ExtensionContext,
-  treeDataProvider: TreeDataProvider
-) => async (treeItem: TreeItem) => {
-  const filePath = join(treeItem.settings.dir, treeItem.label)
-  const parentDir = treeItem.settings.dir.split('/').pop()
+export async function openDynamoDbChangeDiff(change: DynamoDbFileChange) {
+  if (!change) {
+    return null
+  }
+  const leftUri = vscode.Uri.parse(`dynamodb-item-diff:${change.relFilePath}`)
+  let rightUri = vscode.Uri.file(change.absFilePath)
 
-  const service = treeDataProvider.getService(treeItem.settings.serviceHash)
-
-  const leftUri = vscode.Uri.parse(
-    `dynamodb-item-diff:${service.hash}/${parentDir}/${treeItem.label}`
-  )
-  let rightUri = vscode.Uri.file(filePath)
-
-  if (treeItem.label.startsWith('delete-')) {
+  if (change.action === 'delete') {
     rightUri = vscode.Uri.parse(`dynamodb-item-diff:emptyString`)
   }
 
@@ -26,19 +18,22 @@ export const openDynamoDbItemDiff = (
     'vscode.diff',
     leftUri,
     rightUri,
-    treeItem.label
+    change.name
   )
 }
 
 export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
-  constructor(private treeDataProvider: TreeDataProvider) {}
+  constructor(
+    private treeDataProvider: TreeDataProvider,
+    private store: Store
+  ) {}
 
   async provideTextDocumentContent(uri: vscode.Uri): Promise<string | null> {
     if (uri.path === 'emptyString') {
       return ''
     }
 
-    const [serviceHash, fileName] = uri.path.split('/')
+    const [serviceHash, queryTypeIndex, hashKey, fileName] = uri.path.split('/')
     const service = this.treeDataProvider.getService(serviceHash)
 
     if (fileName.startsWith('create-')) {
@@ -51,14 +46,17 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
     }
 
     try {
+      const serviceState = this.store.getState(serviceHash)
       const remoteItem = await getRemoteItem({
-        service,
+        serviceState,
         path: uri.path,
       })
       return remoteItem.stringified
     } catch (err) {
-      console.log(err)
-      return err.message
+      vscode.window.showErrorMessage(
+        `Error displaying item diff. ${err.message}`
+      )
+      return ''
     }
   }
 }

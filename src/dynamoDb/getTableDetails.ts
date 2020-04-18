@@ -1,13 +1,10 @@
-import { Service, DynamoDbTableDesc } from '../types'
+import { Service, DynamoDbTableDesc, Store } from '../types'
 import { DynamoDB } from 'aws-sdk'
 import { getAwsCredentials } from '../getAwsCredentials'
-import { EventEmitter } from 'vscode'
 
-export async function getTableDetails(service): Promise<DynamoDbTableDesc> {
-  if (service.context?._tableDetailsCached) {
-    return service.context._tableDetailsCached
-  }
-
+export async function getTableDetails(
+  service: Service
+): Promise<DynamoDbTableDesc> {
   const credentials = await getAwsCredentials(service.awsProfile)
   const dynamoDb = new DynamoDB({
     credentials,
@@ -23,7 +20,7 @@ export async function getTableDetails(service): Promise<DynamoDbTableDesc> {
   const hashKey = res.Table.KeySchema.find((key) => key.KeyType === 'HASH')
   const range = res.Table.KeySchema.find((key) => key.KeyType === 'RANGE')
 
-  const tableDetails = {
+  let tableDetails = {
     descOutput: res.Table,
     hashKey: hashKey && hashKey.AttributeName ? hashKey.AttributeName : null,
     sortKey: range ? range.AttributeName && range.AttributeName : null,
@@ -34,6 +31,11 @@ export async function getTableDetails(service): Promise<DynamoDbTableDesc> {
           (val) => !!val
         ),
       },
+    ],
+  }
+
+  if (res.Table.GlobalSecondaryIndexes) {
+    tableDetails.indexes.push(
       ...res.Table.GlobalSecondaryIndexes.map((index) => {
         const hashKey = index.KeySchema.find((key) => key.KeyType === 'HASH')
         const range = index.KeySchema.find((key) => key.KeyType === 'RANGE')
@@ -44,16 +46,18 @@ export async function getTableDetails(service): Promise<DynamoDbTableDesc> {
             (val) => !!val
           ),
         }
-      }),
-    ],
+      })
+    )
   }
-  if (service.context) {
-    service.context._tableDetailsCached = tableDetails
-  }
+
   return tableDetails
 }
 
-export async function getDynamoDbServiceContext(service: Service) {
+export async function getDynamoDbServiceContext(
+  service: Service,
+  store: Store
+) {
+  const serviceState = store.getState(service.hash)
   const credentials = await getAwsCredentials(service.awsProfile)
   const dynamoDb = new DynamoDB({
     credentials,
@@ -70,8 +74,7 @@ export async function getDynamoDbServiceContext(service: Service) {
   const range = res.Table.KeySchema.find((key) => key.KeyType === 'RANGE')
 
   return {
-    changes: service.context?.changes,
-    onChangesUpdated: service?.context?.onChangesUpdated || new EventEmitter(),
+    changes: serviceState?.changes,
     hashKey: hashKey && hashKey.AttributeName ? hashKey.AttributeName : null,
     sortKey: range ? range.AttributeName && range.AttributeName : null,
     indexes: [

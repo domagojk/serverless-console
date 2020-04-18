@@ -1,14 +1,16 @@
-import * as os from 'os'
-import * as path from 'path'
+import { join } from 'path'
 import { Uri, workspace, window, ViewColumn, Position } from 'vscode'
-import { Service } from '../../types'
+import { ServiceState } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
-import { getTableDetails } from '../getTableDescription'
 
-export async function createItem(service: Service) {
-  const localDocPath = path.join(
-    os.tmpdir(),
-    `vscode-sls-console/${service.hash}/scan-default`,
+export async function createItem(
+  serviceState: ServiceState,
+  prepopulatedItem?: any
+) {
+  const localDocPath = join(
+    serviceState.tmpDir,
+    `scan-default`,
+    Date.now().toString(),
     `create-${Date.now()}.json`
   )
 
@@ -19,11 +21,11 @@ export async function createItem(service: Service) {
   const doc = await workspace.openTextDocument(uri)
   const editor = await window.showTextDocument(doc, ViewColumn.Beside)
 
-  const tableDetails = await getTableDetails(service)
+  const tableDetails = serviceState.tableDetails
 
-  const initialData = tableDetails.descOutput.AttributeDefinitions.reduce(
-    (acc, curr) => {
-      // todo add all attribute values
+  const initialData =
+    prepopulatedItem ||
+    tableDetails.descOutput.AttributeDefinitions.reduce((acc, curr) => {
       return {
         ...acc,
         [curr.AttributeName]:
@@ -33,9 +35,7 @@ export async function createItem(service: Service) {
             ? ''
             : null,
       }
-    },
-    {}
-  )
+    }, {})
 
   editor.edit((edit) => {
     const { stringified } = getFormattedJSON(initialData)

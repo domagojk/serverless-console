@@ -1,22 +1,29 @@
-import { Service } from '../../types'
+import { ServiceState } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
-import { writeFile } from 'fs'
-import { tmpdir } from 'os'
 import { join } from 'path'
-import { getTableDetails } from '../getTableDescription'
+import { outputFile, readdirSync, existsSync } from 'fs-extra'
 
-export async function deleteItem(service: Service, { sortKey, hashKey }) {
+export async function deleteItem(serviceState: ServiceState, message: any) {
+  const { sortKey, hashKey, index, queryType } = message.payload
   const compositKey = sortKey === undefined ? hashKey : `${hashKey}-${sortKey}`
 
-  const fileName = `delete-${compositKey}.json`
-
-  const localDocPath = join(
-    tmpdir(),
-    `vscode-sls-console/${service.hash}/scan-default`,
-    fileName
+  const localDirPath = join(
+    serviceState.tmpDir,
+    `${queryType}-${index}`,
+    String(hashKey)
   )
 
-  const tableDetails = await getTableDetails(service)
+  const randSufix = '0000'
+  const fileName = `delete-${compositKey}.${randSufix}.json`
+
+  if (existsSync(join(localDirPath, fileName))) {
+    // if file is already sceduled for deletion, no need to anything
+    return null
+  }
+
+  const localDocPath = join(localDirPath, fileName)
+
+  const tableDetails = serviceState.tableDetails
 
   const { stringified } = getFormattedJSON(
     tableDetails.sortKey
@@ -29,9 +36,5 @@ export async function deleteItem(service: Service, { sortKey, hashKey }) {
         }
   )
 
-  await new Promise((resolve) =>
-    writeFile(localDocPath, stringified, () => {
-      resolve()
-    })
-  )
+  await outputFile(localDocPath, stringified)
 }

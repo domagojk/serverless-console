@@ -1,124 +1,149 @@
-import { Service, DynamoDbFileChange } from '../types'
-import { TreeItemCollapsibleState, EventEmitter } from 'vscode'
-import { readdir, statSync } from 'fs'
-import { join } from 'path'
+import { Service, DynamoDbFileChange, Store } from '../types'
+import { TreeItemCollapsibleState } from 'vscode'
+import { statSync } from 'fs'
+import { join, relative } from 'path'
 import { tmpdir } from 'os'
-import { getTableDetails } from './getTableDescription'
+import { getTableDetails } from './getTableDetails'
+import { createHash } from 'crypto'
+import { getLocalItem } from './getLocalItem'
+import { readDirRecursive } from './readDirRecursive'
 
-export async function dynamoDbService(service: Service): Promise<Service> {
-  const basePath = join(tmpdir(), `vscode-sls-console/${service.hash}`)
-  const numOfPrevChanges = service?.context?.changes?.length
+export async function dynamoDbService(
+  service: Service,
+  store: Store
+): Promise<Service> {
+  try {
+    const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
+    const serviceState = store.getState(service.hash)
+    const numOfPrevChanges = serviceState?.changes?.length
 
-  const queries: string[] = await new Promise((resolve) => {
-    readdir(basePath, (err, files) => {
-      if (err) {
-        return resolve([])
-      }
-      return resolve(files)
-    })
-  })
+    const list = readDirRecursive(tmpDir)
 
-  const tableDetails = await getTableDetails(service)
+    const tableDetails = store.getState(service.hash)?.tableDetails
+      ? store.getState(service.hash).tableDetails
+      : await getTableDetails(service)
 
-  let folderListForAll: DynamoDbFileChange[] = []
-  for (const query of queries) {
-    const queryPath = `${basePath}/${query}`
-    const folderListForQuery: DynamoDbFileChange[] = await new Promise(
-      (resolve) =>
-        readdir(queryPath, (err, files) => {
-          if (err) {
-            return resolve([])
+    const oldChanges = store.getState(service.hash)?.changes || []
+    const folderListForAll: DynamoDbFileChange[] = list
+      .filter((file) => file.endsWith('json'))
+      .map((filePath) => {
+        const [queryTypeIndex, hashKey, file] = filePath.split('/')
+        const action = file.startsWith('update-')
+          ? 'update'
+          : file.startsWith('delete-')
+          ? 'delete'
+          : file.startsWith('create-')
+          ? 'create'
+          : null
+
+        if (!action) {
+          return null
+        }
+
+        const dir = join(tmpDir, queryTypeIndex, hashKey)
+
+        const withoutSufix = file.split('.').slice(0, -2).join('.') // removing .xxxx.json
+        let compositKey = withoutSufix.slice(7) // removing update-, create-, delete-
+
+        let error = null
+        let json = null
+
+        try {
+          json = getLocalItem(join(dir, file))
+          if (action === 'create') {
+            compositKey = tableDetails.sortKey
+              ? `${json[tableDetails.hashKey]}-${json[tableDetails.sortKey]}`
+              : json[tableDetails.hashKey]
           }
-          resolve(
-            files
-              .filter(
-                (file) => !file.startsWith('get-') && file.endsWith('.json')
-              )
-              .map((file) => {
-                let compositKey = file.slice(7, file.length - 5)
+        } catch (err) {
+          error = err.message
+        }
 
-                if (file.startsWith('create-')) {
-                  try {
-                    const createData = require(`${queryPath}/${file}`)
-                    compositKey = tableDetails.sortKey
-                      ? `${createData[tableDetails.hashKey]}-${
-                          createData[tableDetails.sortKey]
-                        }`
-                      : createData[tableDetails.hashKey]
-                  } catch (err) {
-                    console.log(err)
-                  }
-                }
+        const splitted = queryTypeIndex.split('-')
+        const index = splitted.slice(1).join('-')
 
-                return {
-                  dir: queryPath,
-                  compositKey,
-                  name: file,
-                  modified: statSync(`${queryPath}/${file}`).mtime.getTime(),
-                }
-              })
-          )
-        })
-    )
+        const id = createHash('md5')
+          .update(join(dir, withoutSufix))
+          .digest('hex')
+        const prevChange = oldChanges.find((c) => c.id === id)
 
-    folderListForAll = [...folderListForAll, ...folderListForQuery].sort(
-      (a, b) => a.modified - b.modified
-    )
-  }
+        return {
+          queryType: splitted[0],
+          absFilePath: `${dir}/${file}`,
+          relFilePath: `${service.hash}/${filePath}`,
+          index,
+          json,
+          error: prevChange?.error,
+          status: prevChange?.status,
+          dir,
+          compositKey,
+          name: file,
+          timestamp: statSync(`${dir}/${file}`).mtime.getTime(),
+          id,
+          action,
+        }
+      })
+      .filter((val) => val !== null)
+      .sort((a, b) => a.timestamp - b.timestamp)
 
-  if (service?.context?.onChangesUpdated) {
-    service.context.onChangesUpdated.fire(folderListForAll)
-  }
-
-  return {
-    ...service,
-    context: {
+    store.setState(service.hash, {
+      tableName: service.tableName,
+      awsProfile: service.awsProfile,
+      region: service.region,
       changes: folderListForAll,
-      onChangesUpdated: service.context?.onChangesUpdated || new EventEmitter(),
-      _tableDetailsCached: tableDetails,
-    },
-    icon: 'dynamodb',
-    items: [
-      {
-        title: 'Items',
-        icon: 'dynamoDb-items',
-        command: {
-          command: 'serverlessConsole.openDynamoDb',
-          title: 'Open DynamoDB Table',
+      tableDetails,
+      tmpDir,
+    })
+
+    return {
+      ...service,
+      icon: 'dynamodb',
+      items: [
+        {
+          title: 'Items',
+          icon: 'dynamoDb-items',
+          command: {
+            command: 'serverlessConsole.openDynamoDb',
+            title: 'Open DynamoDB Table',
+          },
         },
-      },
-      {
-        title: 'Saved Queries',
-        icon: 'star-full',
-        collapsibleState: TreeItemCollapsibleState.Collapsed,
-      },
-      {
-        title: folderListForAll.length
-          ? `Changes (${folderListForAll.length})`
-          : 'Changes',
-        icon: 'circle-outline',
-        collapsibleState:
-          numOfPrevChanges === folderListForAll.length
-            ? TreeItemCollapsibleState.Collapsed
-            : TreeItemCollapsibleState.Expanded,
-        items: folderListForAll.map((file) => {
-          return {
-            title: file.name,
-            icon: file.name.startsWith('update-')
-              ? 'edit-item'
-              : file.name.startsWith('delete-')
-              ? 'delete-item'
-              : file.name.startsWith('create-')
-              ? 'create-item'
-              : null,
-            dir: file.dir,
-            command: {
-              command: 'serverlessConsole.openDynamoDbItemDiff',
-              title: 'Open DynamoDB Item Diff',
-            },
-          }
-        }),
-      },
-    ],
+        {
+          title: folderListForAll.length
+            ? `Changes (${folderListForAll.length})`
+            : 'Changes',
+          icon: 'circle-outline',
+          collapsibleState:
+            numOfPrevChanges === folderListForAll.length
+              ? TreeItemCollapsibleState.Collapsed
+              : TreeItemCollapsibleState.Expanded,
+          contextValue: 'dynamodb-changes',
+          items: folderListForAll.map((file) => {
+            return {
+              title: file.name,
+              icon: file.name.startsWith('update-')
+                ? 'edit-item'
+                : file.name.startsWith('delete-')
+                ? 'delete-item'
+                : file.name.startsWith('create-')
+                ? 'create-item'
+                : null,
+              dir: file.dir,
+              command: {
+                command: 'serverlessConsole.openDynamoDbItemDiff',
+                title: 'Open DynamoDB Item Diff',
+              },
+              contextValue: 'dynamodb-change',
+            }
+          }),
+        },
+      ],
+    }
+  } catch (err) {
+    console.log(err)
+    return {
+      ...service,
+      icon: 'dynamodb',
+      error: err.message,
+    }
   }
 }

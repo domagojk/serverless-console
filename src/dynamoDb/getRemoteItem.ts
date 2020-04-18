@@ -1,110 +1,99 @@
-import { Service } from '../types'
+import { Service, Store, ServiceState } from '../types'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { readFileSync } from 'fs-extra'
 import { DynamoDB } from 'aws-sdk'
 import { uniq } from 'lodash'
-import { getTableDetails } from './getTableDescription'
 import { getAwsCredentials } from '../getAwsCredentials'
 import { getFilterExpression } from './getFilterExpression'
 import { getFormattedJSON } from './getFormattedJSON'
 import { getLocalItem } from './getLocalItem'
 
 export async function getRemoteItem({
-  service,
+  serviceState,
   path,
   localItem,
 }: {
-  service: Service
+  serviceState: ServiceState
   path: string
   localItem?: any
 }) {
-  const [queryTypeIndex, fileName] = path.split('/').slice(-2)
+  const [queryTypeIndex, hashKey, fileName] = path.split('/').slice(-3)
   const splitted = queryTypeIndex.split('-')
-  splitted.shift() // first item removed
-  const index = splitted.join('-') // rest is joined
+  const index = splitted.slice(1).join('-')
 
-  const filePath = join(
-    tmpdir(),
-    `vscode-sls-console/${service.hash}/${queryTypeIndex}`,
-    fileName
-  )
+  const filePath = join(serviceState.tmpDir, queryTypeIndex, hashKey, fileName)
+
+  const withoutSufix = fileName.split('.').slice(0, -2).join('.') // removing .xxxx.json
+
+  const hashKeyRangeKey = withoutSufix
+    .split('-') // create array
+    .slice(1) // take all from update- delete- create-
+    .join('-') // make string again
+
+  const rangeKey = hashKeyRangeKey.split(`${hashKey}-`)[1]
 
   const json = localItem || getLocalItem(filePath)
 
-  const tableDetails = await getTableDetails(service)
+  const tableDetails = serviceState.tableDetails
   const indexDetails = tableDetails.indexes.find(({ id }) => id === index)
 
   if (!indexDetails) {
     throw new Error('Unable to getItem')
   }
 
-  const credentials = await getAwsCredentials(service.awsProfile)
+  const credentials = await getAwsCredentials(serviceState.awsProfile)
   const dynamoDb = new DynamoDB({
     credentials,
-    region: service.region,
+    region: serviceState.region,
   })
 
-  const hashKey = json[indexDetails.keys[0]]
-  const rangeKey = json[indexDetails.keys[1]]
-
   const queryParams = {
-    TableName: service.tableName,
+    TableName: serviceState.tableName,
     IndexName: index === 'default' ? null : index,
     ...getFilterExpression(
-      [
-        {
-          comparison: '=',
-          dataType: tableDetails.descOutput.AttributeDefinitions.find(
-            (attr) => attr.AttributeName === indexDetails.keys[0]
-          )?.AttributeType,
-          fieldName: indexDetails.keys[0],
-          value: hashKey,
-          keyCondition: true,
-        },
-        {
-          comparison: '=',
-          dataType: tableDetails.descOutput.AttributeDefinitions.find(
-            (attr) => attr.AttributeName === indexDetails.keys[1]
-          )?.AttributeType,
-          fieldName: indexDetails.keys[1],
-          value: rangeKey,
-          keyCondition: true,
-        },
-      ],
+      rangeKey
+        ? [
+            {
+              comparison: '=',
+              dataType: tableDetails.descOutput.AttributeDefinitions.find(
+                (attr) => attr.AttributeName === indexDetails.keys[0]
+              )?.AttributeType,
+              fieldName: indexDetails.keys[0],
+              value: hashKey,
+              keyCondition: true,
+            },
+            {
+              comparison: '=',
+              dataType: tableDetails.descOutput.AttributeDefinitions.find(
+                (attr) => attr.AttributeName === indexDetails.keys[1]
+              )?.AttributeType,
+              fieldName: indexDetails.keys[1],
+              value: rangeKey,
+              keyCondition: true,
+            },
+          ]
+        : [
+            {
+              comparison: '=',
+              dataType: tableDetails.descOutput.AttributeDefinitions.find(
+                (attr) => attr.AttributeName === indexDetails.keys[0]
+              )?.AttributeType,
+              fieldName: indexDetails.keys[0],
+              value: hashKey,
+              keyCondition: true,
+            },
+          ],
       'query'
     ),
   }
+
   const item = await dynamoDb
-    .query({
-      TableName: service.tableName,
-      IndexName: index === 'default' ? null : index,
-      ...getFilterExpression(
-        [
-          {
-            comparison: '=',
-            dataType: tableDetails.descOutput.AttributeDefinitions.find(
-              (attr) => attr.AttributeName === indexDetails.keys[0]
-            )?.AttributeType,
-            fieldName: indexDetails.keys[0],
-            value: hashKey,
-            keyCondition: true,
-          },
-          {
-            comparison: '=',
-            dataType: tableDetails.descOutput.AttributeDefinitions.find(
-              (attr) => attr.AttributeName === indexDetails.keys[1]
-            )?.AttributeType,
-            fieldName: indexDetails.keys[1],
-            value: rangeKey,
-            keyCondition: true,
-          },
-        ],
-        'query'
-      ),
-    })
+    .query(queryParams)
     .promise()
     .then((res) => {
+      if (res.Count === 0) {
+        throw Error('item not found')
+      }
       if (res.Count !== 1) {
         throw Error(`found ${res.Count} items, expected 1`)
       }

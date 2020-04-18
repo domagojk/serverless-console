@@ -9,7 +9,9 @@ export function getLocalItem(path: string) {
       })
     )
   } catch (err) {
-    throw new Error('Unable to parse JSON file')
+    let error: any = new Error('Unable to parse JSON file')
+    error.code = 'JSON_PARSE_ERROR'
+    throw error
   }
   return json
 }
