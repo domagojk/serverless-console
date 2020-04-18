@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.0]
+- Added DynamoDB service
+
 ## [0.5.5]
 - Fixed issue #5
 
