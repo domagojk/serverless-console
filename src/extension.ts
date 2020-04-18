@@ -28,7 +28,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // sls print commands saved in settings
-  const services = getServices(true)
+  const services = getServices()
 
   // tmp directory (used for saving dynamodb changes)
   const serviceTmpDir = join(tmpdir(), 'vscode-sls-console/')
