@@ -2,7 +2,7 @@
   "name": "serverlessconsole",
   "publisher": "devadvice",
   "displayName": "Serverless Console",
-  "description": "Serverless Console is an alternative UI for AWS CloudWatch, focused on \"serverless development\"",
+  "description": "Serverless Console is an alternative UI for AWS CloudWatch and DynamoDB, focused on \"serverless development\"",
   "author": "domagojk (http://github.com/domagojk)",
   "version": "0.6.0",
   "repository": {
@@ -21,6 +21,7 @@
     "Serverless",
     "CloudWatch",
     "Lambda",
+    "DynamoDB",
     "AWS"
   ],
   "activationEvents": [

@@ -19,6 +19,12 @@ Serverless Console is an alternative UI for AWS Cloudwatch. Its focus is on "ser
 - [Cloudwatch Insights query](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html) for simple search is used by default (but it can be modified)
 - Preserves search history (while the tab is opened)
 
+## DynamoDB Console (PRO Feature)
+
+![App Preview](./dynamodb.gif)
+
+\* This feature requires a license
+
 ## Supported Services
 
 - **Serverless Framework** - data is retrieved by parsing `serverless.yml` definition
@@ -32,6 +38,3 @@ This extension contributes the following settings:
 - `serverlessConsole.groupPerRequest`: determines a default option on whether logs should be grouped per request.
 - `serverlessConsole.services`: a list of services from which data is retrieved.
 
-# Credits
-
-Icon made by [turkkub](https://www.flaticon.com/authors/turkkub) from [www.flaticon.com](http://www.flaticon.com/)
