@@ -12,6 +12,10 @@ export async function listDynamoDbTables(awsProfile: string, region: string) {
     currentResults = [],
     ExclusiveStartTableName = null
   ) => {
+    if (currentResults.length > 1000) {
+      // limit to 10 requests
+      return currentResults
+    }
     const res = await dynamoDb
       .listTables({
         ExclusiveStartTableName,
