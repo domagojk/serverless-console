@@ -5,6 +5,24 @@ All notable changes to the "serverless-console" extension will be documented in 
 ## [0.6.0]
 - Added DynamoDB service
 
+## [0.5.12]
+- Fixed bug with missing region when using CloudWatch Insights
+
+## [0.5.11]
+- Added support for AWS profiles using assumed role (issue #11)
+
+## [0.5.9]
+- Fixed bug with auto refresh (ignoring request if tab is not visible)
+
+## [0.5.8]
+- Fixed issue #8
+
+## [0.5.7]
+- Fixed issue #7
+
+## [0.5.6]
+- Added support for enviroment variables
+
 ## [0.5.5]
 - Fixed issue #5
 

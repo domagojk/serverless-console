@@ -1,7 +1,6 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
 import { Service } from './types'
-import { existsSync } from 'fs'
 import { createHash } from 'crypto'
 
 export function getServices(initial?: boolean): Service[] {
@@ -17,7 +16,7 @@ export function getServices(initial?: boolean): Service[] {
 }
 
 export function prepareService(conf) {
-  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.path
+  const workspaceDir = vscode.workspace.workspaceFolders[0].uri.fsPath
 
   delete conf.hash
   const hash = getServiceHash(conf)
