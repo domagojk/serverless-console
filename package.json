@@ -26,7 +26,7 @@
   "activationEvents": [
     "onView:slsConsoleTree"
   ],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "configuration": {
       "title": "Serverless Console",
@@ -85,6 +85,20 @@
               },
               "title": {
                 "type": "string"
+              },
+              "envVars": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
               },
               "tableName": {
                 "type": "string",

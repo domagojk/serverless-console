@@ -9,7 +9,7 @@ import { createStore } from './store'
 import { cleanEmptyDirs } from './cleanEmptyDirs'
 import { dynamodbInit } from './dynamoDb/dynamodbInit'
 import { logsInit } from './logs/logsInit'
-import { showProOptions, getLicense } from './checkLicense'
+import { showProOptions } from './checkLicense'
 
 export async function activate(context: vscode.ExtensionContext) {
   const store = createStore()
