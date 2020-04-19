@@ -211,7 +211,32 @@ export const addService = (
           region: message.payload.region,
         })
 
-        const res = await cloudWatch.describeLogGroups().promise()
+        const describeLogGroupsRecursive = async (
+          currentResults = [],
+          nextToken = null
+        ) => {
+          if (currentResults.length > 500) {
+            // limit to 10 requests
+            return currentResults
+          }
+
+          const res = await cloudWatch
+            .describeLogGroups({
+              nextToken,
+            })
+            .promise()
+
+          if (res.nextToken) {
+            return describeLogGroupsRecursive(
+              [...currentResults, ...res.logGroups],
+              res.nextToken
+            )
+          } else {
+            return [...currentResults, ...res.logGroups]
+          }
+        }
+
+        const res = await describeLogGroupsRecursive()
 
         panel.webview.postMessage({
           messageId: message.messageId,
