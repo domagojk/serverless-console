@@ -97,7 +97,7 @@ export async function dynamoDbService(
 
     return {
       ...service,
-      icon: 'dynamodb',
+      icon: 'dynamoDb',
       items: [
         {
           title: 'Items',

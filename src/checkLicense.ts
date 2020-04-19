@@ -214,25 +214,37 @@ export async function showProOptions() {
 
     selectedOption = await vscode.window.showWarningMessage(
       warningMessage,
+      {
+        modal: true,
+      },
       'Buy Now',
       'Enter License Key'
     )
   } else if (invalid === true && !expires) {
     selectedOption = await vscode.window.showInformationMessage(
       'Serverless Console PRO',
-      'Learn More',
+      {
+        modal: true,
+      },
+      'More info',
       'Start Trial',
       'Enter License Key'
     )
   } else if (invalid === false && inTrial && expires) {
     selectedOption = await vscode.window.showWarningMessage(
       `Your Serverless Console PRO trial ends in ${daysRemaining}`,
+      {
+        modal: true,
+      },
       'Buy Now',
       'Enter License Key'
     )
   } else if (invalid === false && inTrial === false && expires) {
     selectedOption = await vscode.window.showWarningMessage(
       `Your Serverless Console PRO expires in ${daysRemaining}`,
+      {
+        modal: true
+      },
       'Renew'
     )
   } else if (invalid === false && !expires) {
@@ -244,7 +256,7 @@ export async function showProOptions() {
   if (
     selectedOption === 'Buy Now' ||
     selectedOption === 'Renew' ||
-    selectedOption === 'Learn More'
+    selectedOption === 'More info'
   ) {
     buyLicense()
   } else if (selectedOption === 'Enter License Key') {
