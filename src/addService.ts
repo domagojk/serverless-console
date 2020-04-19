@@ -236,12 +236,12 @@ export const addService = (
           }
         }
 
-        const res = await describeLogGroupsRecursive()
+        const logGroups = await describeLogGroupsRecursive()
 
         panel.webview.postMessage({
           messageId: message.messageId,
           payload: {
-            logGroups: res.logGroups.map((l) => l.logGroupName),
+            logGroups: logGroups.map((l) => l.logGroupName),
           },
         })
       } catch (err) {
