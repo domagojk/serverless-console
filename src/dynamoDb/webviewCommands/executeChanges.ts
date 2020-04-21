@@ -195,12 +195,23 @@ export async function getUpdateParams(
     }
   }, AttributeUpdates)
   AttributeUpdates = Object.keys(diff.deleted).reduce((acc, property) => {
-    return {
-      ...acc,
-      [property]: {
-        Action: 'DELETE',
-        Value: localItem[property],
-      },
+    if (localItem[property] !== undefined) {
+      // not entire property is deleted
+      return {
+        ...acc,
+        [property]: {
+          Action: 'PUT',
+          Value: localItem[property],
+        },
+      }
+    } else {
+      return {
+        ...acc,
+        [property]: {
+          Action: 'DELETE',
+          Value: localItem[property],
+        },
+      }
     }
   }, AttributeUpdates)
 
