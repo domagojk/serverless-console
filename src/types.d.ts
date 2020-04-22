@@ -75,6 +75,7 @@ export type Service = {
     stackName: string
     stage: string
     region?: string
+    awsProfile?: string
   }[]
   icon?: string
   awsProfile?: string
@@ -84,7 +85,7 @@ export type Service = {
   title?: string
   cwd?: string
   command?: string
-  stages?: string[]
+  stages?: any[]
   envVars?: { key: string; value: string }[]
   timeOffsetInMs?: number
   items?: ServiceItem[]

@@ -11,7 +11,7 @@ export async function cloudformationService(
   try {
     for (const stack of service.stacks) {
       const region = stack.region || 'us-east-1'
-      const profile = service.awsProfile || 'default'
+      const profile = stack.awsProfile || service.awsProfile || 'default'
 
       const credentials = await getAwsCredentials(profile)
       const cloudformation = new CloudFormation({
@@ -59,7 +59,8 @@ export async function cloudformationService(
             title: res.LogicalResourceId,
             region,
             functionName: res.PhysicalResourceId,
-            log: `/aws/lambda/${res.PhysicalResourceId}`
+            log: `/aws/lambda/${res.PhysicalResourceId}`,
+            awsProfile: profile
           }
         })
 
@@ -73,7 +74,8 @@ export async function cloudformationService(
               [stack.stage]: {
                 logs: curr.log,
                 lambda: curr.functionName,
-                region: curr.region
+                region: curr.region,
+                awsProfile: curr.awsProfile
               }
             }
           }
@@ -149,7 +151,7 @@ export async function cloudformationService(
 
           const lambdaFn = uriResolved?.[lambdaIndex + 1]?.['Fn::GetAtt']?.[0]
 
-          if (lambdaFn && functionsAllStages[lambdaFn]) {
+          if (lambdaFn && functionsAllStages[lambdaFn] && method.pathPart) {
             const desc = `${method.Properties.HttpMethod} /${method.pathPart}`
             functionsAllStages[lambdaFn].method = desc
           }
@@ -181,7 +183,8 @@ export async function cloudformationService(
                 title: stage,
                 logs: fn.stages[stage].logs,
                 lambda: fn.stages[stage].lambda,
-                region: fn.stages[stage].region
+                region: fn.stages[stage].region,
+                awsProfile: fn.stages[stage].awsProfile
               }
             }),
             command: {

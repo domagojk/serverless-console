@@ -101,7 +101,9 @@ export const openLogs = (
             }
 
             try {
-              const credentials = await getAwsCredentials(service.awsProfile)
+              const credentials = await getAwsCredentials(
+                message.payload.awsProfile || service.awsProfile
+              )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
                 region: message.payload.region || service.region,
@@ -160,7 +162,9 @@ export const openLogs = (
               }
 
               try {
-                const credentials = await getAwsCredentials(service.awsProfile)
+                const credentials = await getAwsCredentials(
+                  message.payload.awsProfile || service.awsProfile
+                )
                 const cloudwatchlogs = new CloudWatchLogs({
                   credentials,
                   region: message.payload.region || service.region,
@@ -205,7 +209,9 @@ export const openLogs = (
             break
           case 'getLambdaOverview': {
             try {
-              const credentials = await getAwsCredentials(service.awsProfile)
+              const credentials = await getAwsCredentials(
+                message.payload.awsProfile || service.awsProfile
+              )
               const lambda = new Lambda({
                 credentials,
                 region: message.payload.region || service.region,
@@ -242,7 +248,9 @@ export const openLogs = (
           }
           case 'startQuery': {
             try {
-              const credentials = await getAwsCredentials(service.awsProfile)
+              const credentials = await getAwsCredentials(
+                message.payload.awsProfile || service.awsProfile
+              )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
                 region: message.payload.region || service.region,
@@ -279,7 +287,9 @@ export const openLogs = (
           }
           case 'getQueryResults': {
             try {
-              const credentials = await getAwsCredentials(service.awsProfile)
+              const credentials = await getAwsCredentials(
+                message.payload.awsProfile || service.awsProfile
+              )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
                 region: message.payload.region || service.region,
@@ -312,7 +322,9 @@ export const openLogs = (
           }
           case 'stopQuery': {
             try {
-              const credentials = await getAwsCredentials(service.awsProfile)
+              const credentials = await getAwsCredentials(
+                message.payload.awsProfile || service.awsProfile
+              )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
                 region: message.payload.region || service.region,

@@ -162,11 +162,23 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
                     httpEvent.http.path
                   }`
                 : null,
-              tabs: service.stages.map(stage => ({
-                title: stage,
-                logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
-                lambda: `${yml.service.name}-${stage}-${fnName}`
-              })),
+              tabs: service.stages.map((stage) => {
+                if (typeof stage === 'string') {
+                  return {
+                    title: stage,
+                    logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
+                    lambda: `${yml.service.name}-${stage}-${fnName}`,
+                  }
+                } else {
+                  return {
+                    title: stage.title || stage.stage,
+                    logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
+                    lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
+                    awsProfile: stage.awsProfile,
+                    region: stage.region,
+                  }
+                }
+              }),
               command: {
                 command: 'serverlessConsole.openLogs',
                 title: 'Open Logs'
