@@ -9,6 +9,7 @@ export async function createItem(
 ) {
   const localDocPath = join(
     serviceState.tmpDir,
+    'changes',
     `scan-default`,
     Date.now().toString(),
     `create-${Date.now()}.json`

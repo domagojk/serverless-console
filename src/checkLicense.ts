@@ -34,7 +34,7 @@ export async function getLicense(params?: {
     }
   }
 
-  const deviceId = await machineId().catch(() => null)
+  const deviceId = await getDeviceId()
 
   return axios
     .get(
@@ -80,7 +80,7 @@ export async function getLicense(params?: {
 }
 
 export async function startTrial(): Promise<License> {
-  const deviceId = await machineId().catch(() => null)
+  const deviceId = await getDeviceId()
 
   return axios
     .get(`https://api.serverlessconsole.com/startTrial?deviceId=${deviceId}`)
@@ -243,7 +243,7 @@ export async function showProOptions() {
     selectedOption = await vscode.window.showWarningMessage(
       `Your Serverless Console PRO expires in ${daysRemaining}`,
       {
-        modal: true
+        modal: true,
       },
       'Renew'
     )
@@ -264,4 +264,27 @@ export async function showProOptions() {
   } else if (selectedOption === 'Start Trial') {
     startTrialWithNotifications()
   }
+}
+
+function getDeviceId(): Promise<string | null> {
+  let isResolved = false
+
+  return new Promise((resolve) => {
+    machineId()
+      .catch(() => null)
+      .then((id) => {
+        if (isResolved === false) {
+          isResolved = true
+          resolve(id)
+        }
+      })
+
+    // if deviceId is not resolved in 500ms, return null
+    setTimeout(() => {
+      if (isResolved === false) {
+        isResolved = true
+        resolve()
+      }
+    }, 500)
+  })
 }

@@ -1,12 +1,13 @@
 import { Service, DynamoDbFileChange, Store } from '../types'
 import { TreeItemCollapsibleState } from 'vscode'
 import { statSync } from 'fs'
-import { join, relative } from 'path'
+import { join } from 'path'
 import { tmpdir } from 'os'
 import { getTableDetails } from './getTableDetails'
 import { createHash } from 'crypto'
 import { getLocalItem } from './getLocalItem'
 import { readDirRecursive } from './readDirRecursive'
+import { removeSync, pathExistsSync } from 'fs-extra'
 
 export async function dynamoDbService(
   service: Service,
@@ -14,10 +15,18 @@ export async function dynamoDbService(
 ): Promise<Service> {
   try {
     const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
+    const tmpChangesDir = join(tmpDir, 'changes')
+    const tmpOriginalDir = join(tmpDir, 'original')
+
     const serviceState = store.getState(service.hash)
     const numOfPrevChanges = serviceState?.changes?.length
 
-    const list = readDirRecursive(tmpDir)
+    const list = readDirRecursive(tmpChangesDir)
+
+    if (list.length === 0 && pathExistsSync(tmpOriginalDir)) {
+      removeSync(tmpOriginalDir)
+      console.log('removed original')
+    }
 
     const tableDetails = store.getState(service.hash)?.tableDetails
       ? store.getState(service.hash).tableDetails
@@ -40,45 +49,71 @@ export async function dynamoDbService(
           return null
         }
 
-        const dir = join(tmpDir, queryTypeIndex, hashKey)
+        const dirChange = join(tmpChangesDir, queryTypeIndex, hashKey)
+        const absFilePathChange = join(dirChange, file)
+        let jsonChange = null
 
-        const withoutSufix = file.split('.').slice(0, -2).join('.') // removing .xxxx.json
-        let compositKey = withoutSufix.slice(7) // removing update-, create-, delete-
-
-        let error = null
-        let json = null
+        let dirOriginal = null
+        let absFilePathOriginal = null
+        let jsonOriginal = null
 
         try {
-          json = getLocalItem(join(dir, file))
-          if (action === 'create') {
-            compositKey = tableDetails.sortKey
-              ? `${json[tableDetails.hashKey]}-${json[tableDetails.sortKey]}`
-              : json[tableDetails.hashKey]
-          }
+          jsonChange = getLocalItem(absFilePathChange)
         } catch (err) {
-          error = err.message
+          return null
         }
+
+        if (action === 'update') {
+          dirOriginal = join(tmpOriginalDir, queryTypeIndex, hashKey)
+          absFilePathOriginal = join(dirOriginal, file)
+          jsonOriginal = null
+
+          try {
+            jsonChange = getLocalItem(absFilePathChange)
+          } catch (err) {
+            return null
+          }
+
+          try {
+            jsonOriginal = getLocalItem(absFilePathOriginal)
+          } catch (err) {
+            return null
+          }
+
+          if (JSON.stringify(jsonChange) === JSON.stringify(jsonOriginal)) {
+            return null
+          }
+        }
+
+        const compositKey =
+          action === 'create'
+            ? tableDetails.sortKey
+              ? `${jsonChange[tableDetails.hashKey]}-${
+                  jsonChange[tableDetails.sortKey]
+                }`
+              : jsonChange[tableDetails.hashKey]
+            : file.split('.').slice(0, -1).join('.').slice(7) // removing .json and removing update-, create-, delete-
 
         const splitted = queryTypeIndex.split('-')
         const index = splitted.slice(1).join('-')
 
-        const id = createHash('md5')
-          .update(join(dir, withoutSufix))
-          .digest('hex')
+        const id = createHash('md5').update(absFilePathChange).digest('hex')
+
         const prevChange = oldChanges.find((c) => c.id === id)
 
         return {
           queryType: splitted[0],
-          absFilePath: `${dir}/${file}`,
-          relFilePath: `${service.hash}/${filePath}`,
+          absFilePath: absFilePathChange,
+          relFilePath: `${service.hash}/changes/${filePath}`,
+          absFilePathOriginal,
           index,
-          json,
+          json: jsonChange,
           error: prevChange?.error,
           status: prevChange?.status,
-          dir,
+          dir: dirChange,
           compositKey,
           name: file,
-          timestamp: statSync(`${dir}/${file}`).mtime.getTime(),
+          timestamp: statSync(absFilePathChange).mtime.getTime(),
           id,
           action,
         }

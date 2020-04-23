@@ -3,37 +3,47 @@ import { join } from 'path'
 import { ServiceState } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
 import { getLocalItem } from '../getLocalItem'
-import { findExistingChange } from '../findExistingChange'
-import { readFileSync } from 'fs-extra'
+import { writeFileSync, ensureFileSync, pathExists } from 'fs-extra'
 
 export async function editItem(serviceState: ServiceState, message: any) {
-  const localDirPath = join(
-    serviceState.tmpDir,
-    `${message.payload.queryType}-${message.payload.index}`,
-    String(message.payload.hashKey)
-  )
   const compositKey =
     message.payload.sortKey !== undefined
       ? `${message.payload.hashKey}-${message.payload.sortKey}`
       : message.payload.hashKey
 
-  // using randSufix as filename end because vscode already exists
-  // alert even after file is removed from disc (probably the file is stored in cache)
-  const randSufix = String(Math.round(Math.random() * 10000)).padStart(4, '0')
-
-  const existingChange = await findExistingChange(
-    localDirPath,
-    `update-${compositKey}`
+  const relativeFilePath = join(
+    `${message.payload.queryType}-${message.payload.index}`,
+    String(message.payload.hashKey),
+    `update-${compositKey}.json`
+  )
+  const localDocPathOriginal = join(
+    serviceState.tmpDir,
+    'original',
+    relativeFilePath
   )
 
-  const localDocPath = join(
-    localDirPath,
-    existingChange ? existingChange : `update-${compositKey}.${randSufix}.json`
-  )
+  const localDocPath = join(serviceState.tmpDir, 'changes', relativeFilePath)
 
-  const uri = existingChange
-    ? vscode.Uri.file(localDocPath)
-    : vscode.Uri.file(localDocPath).with({ scheme: 'untitled' })
+  const existingChange = await pathExists(localDocPath)
+
+  const originalFormated = getFormattedJSON(
+    message.payload.originalContent,
+    message.payload.columns
+  )
+  ensureFileSync(localDocPathOriginal)
+  writeFileSync(localDocPathOriginal, originalFormated.stringified)
+
+  if (!existingChange) {
+    const { stringified } = getFormattedJSON(
+      message.payload.content,
+      message.payload.columns
+    )
+
+    ensureFileSync(localDocPath)
+    writeFileSync(localDocPath, stringified)
+  }
+
+  const uri = vscode.Uri.file(localDocPath)
 
   const doc = await vscode.workspace.openTextDocument(uri)
   const editor = await vscode.window.showTextDocument(
@@ -42,13 +52,8 @@ export async function editItem(serviceState: ServiceState, message: any) {
   )
 
   try {
-    let content = existingChange
-      ? getLocalItem(localDocPath)
-      : message.payload.content
-
-    let columns = existingChange
-      ? Object.keys(content)
-      : message.payload.columns
+    let content = getLocalItem(localDocPath)
+    let columns = Object.keys(content)
 
     const { json, stringified, space } = getFormattedJSON(content, columns)
 

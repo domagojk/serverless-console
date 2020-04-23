@@ -100,6 +100,7 @@ export type DynamoDbFileChange = {
   id: string
   absFilePath: string
   relFilePath: string
+  absFilePathOriginal?: string
   action: string
   status?: 'inProgress' | 'error'
   command?: any

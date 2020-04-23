@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.3]
+- DynamoDB: Check if updated property was changed in the meantime
+
 ## [0.6.2]
 - Added awsProfile per stage option (#13)
 

@@ -168,15 +168,38 @@ export async function getUpdateParams(
   change: DynamoDbFileChange
 ) {
   const localItem = getLocalItem(change.absFilePath)
+  const originalItem = getLocalItem(change.absFilePathOriginal)
+
   const remoteItem = await getRemoteItem({
     serviceState,
     path: change.absFilePath,
   })
 
-  const diff: any = detailedDiff(remoteItem.json, localItem)
+  const remoteDiff: any = detailedDiff(originalItem, remoteItem.json)
+  const modifiedProps = [
+    ...Object.keys(remoteDiff.updated),
+    ...Object.keys(remoteDiff.added),
+    ...Object.keys(remoteDiff.deleted),
+  ]
+
+  const diff: any = detailedDiff(originalItem, localItem)
   const tableDesc = serviceState.tableDetails
 
+  const checkIfChanged = (property) => {
+    if (modifiedProps.includes(property)) {
+      throw new Error(
+        `Property "${property}" was "${String(
+          originalItem[property]
+        )}" when you committed your change, but its current value is: "${String(
+          remoteItem.json[property]
+        )}". Please refresh your query and try again.`
+      )
+    }
+  }
+
   let AttributeUpdates = Object.keys(diff.updated).reduce((acc, property) => {
+    checkIfChanged(property)
+
     return {
       ...acc,
       [property]: {
@@ -186,6 +209,8 @@ export async function getUpdateParams(
     }
   }, {})
   AttributeUpdates = Object.keys(diff.added).reduce((acc, property) => {
+    checkIfChanged(property)
+
     return {
       ...acc,
       [property]: {
@@ -195,6 +220,8 @@ export async function getUpdateParams(
     }
   }, AttributeUpdates)
   AttributeUpdates = Object.keys(diff.deleted).reduce((acc, property) => {
+    checkIfChanged(property)
+
     if (localItem[property] !== undefined) {
       // not entire property is deleted
       return {
@@ -218,11 +245,11 @@ export async function getUpdateParams(
   const updateParams: DynamoDB.DocumentClient.UpdateItemInput = {
     Key: tableDesc.sortKey
       ? {
-          [tableDesc.hashKey]: remoteItem.json[tableDesc.hashKey],
-          [tableDesc.sortKey]: remoteItem.json[tableDesc.sortKey],
+          [tableDesc.hashKey]: originalItem[tableDesc.hashKey],
+          [tableDesc.sortKey]: originalItem[tableDesc.sortKey],
         }
       : {
-          [tableDesc.hashKey]: remoteItem.json[tableDesc.hashKey],
+          [tableDesc.hashKey]: originalItem[tableDesc.hashKey],
         },
     TableName: serviceState.tableName,
     AttributeUpdates,

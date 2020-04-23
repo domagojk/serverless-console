@@ -1,7 +1,9 @@
 import * as vscode from 'vscode'
 import { TreeDataProvider } from '../treeDataProvider'
-import { getRemoteItem } from './getRemoteItem'
 import { Store, DynamoDbFileChange } from '../types'
+import { join } from 'path'
+import { tmpdir } from 'os'
+import { readFileSync } from 'fs-extra'
 
 export async function openDynamoDbChangeDiff(change: DynamoDbFileChange) {
   if (!change) {
@@ -33,7 +35,13 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
       return ''
     }
 
-    const [serviceHash, queryTypeIndex, hashKey, fileName] = uri.path.split('/')
+    const [
+      serviceHash,
+      changeOrOriginal,
+      queryTypeIndex,
+      hashKey,
+      fileName,
+    ] = uri.path.split('/')
     const service = this.treeDataProvider.getService(serviceHash)
 
     if (fileName.startsWith('create-')) {
@@ -46,12 +54,13 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
     }
 
     try {
-      const serviceState = this.store.getState(serviceHash)
-      const remoteItem = await getRemoteItem({
-        serviceState,
-        path: uri.path,
-      })
-      return remoteItem.stringified
+      const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
+      return readFileSync(
+        join(tmpDir, 'original', queryTypeIndex, hashKey, fileName),
+        {
+          encoding: 'utf-8',
+        }
+      )
     } catch (err) {
       vscode.window.showErrorMessage(
         `Error displaying item diff. ${err.message}`

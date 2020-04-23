@@ -1,7 +1,7 @@
 import { ServiceState } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
 import { join } from 'path'
-import { outputFile, readdirSync, existsSync } from 'fs-extra'
+import { outputFile, existsSync } from 'fs-extra'
 
 export async function deleteItem(serviceState: ServiceState, message: any) {
   const { sortKey, hashKey, index, queryType } = message.payload
@@ -9,12 +9,12 @@ export async function deleteItem(serviceState: ServiceState, message: any) {
 
   const localDirPath = join(
     serviceState.tmpDir,
+    'changes',
     `${queryType}-${index}`,
     String(hashKey)
   )
 
-  const randSufix = '0000'
-  const fileName = `delete-${compositKey}.${randSufix}.json`
+  const fileName = `delete-${compositKey}.json`
 
   if (existsSync(join(localDirPath, fileName))) {
     // if file is already sceduled for deletion, no need to anything

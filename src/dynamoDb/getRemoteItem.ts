@@ -1,6 +1,5 @@
-import { Service, Store, ServiceState } from '../types'
+import { ServiceState } from '../types'
 import { join } from 'path'
-import { tmpdir } from 'os'
 import { DynamoDB } from 'aws-sdk'
 import { uniq } from 'lodash'
 import { getAwsCredentials } from '../getAwsCredentials'
@@ -11,19 +10,23 @@ import { getLocalItem } from './getLocalItem'
 export async function getRemoteItem({
   serviceState,
   path,
-  localItem,
 }: {
   serviceState: ServiceState
   path: string
-  localItem?: any
 }) {
   const [queryTypeIndex, hashKey, fileName] = path.split('/').slice(-3)
   const splitted = queryTypeIndex.split('-')
   const index = splitted.slice(1).join('-')
 
-  const filePath = join(serviceState.tmpDir, queryTypeIndex, hashKey, fileName)
+  const filePath = join(
+    serviceState.tmpDir,
+    'changes',
+    queryTypeIndex,
+    hashKey,
+    fileName
+  )
 
-  const withoutSufix = fileName.split('.').slice(0, -2).join('.') // removing .xxxx.json
+  const withoutSufix = fileName.split('.').slice(0, -1).join('.') // removing .json
 
   const hashKeyRangeKey = withoutSufix
     .split('-') // create array
@@ -32,7 +35,7 @@ export async function getRemoteItem({
 
   const rangeKey = hashKeyRangeKey.split(`${hashKey}-`)[1]
 
-  const json = localItem || getLocalItem(filePath)
+  const json = getLocalItem(filePath)
 
   const tableDetails = serviceState.tableDetails
   const indexDetails = tableDetails.indexes.find(({ id }) => id === index)
