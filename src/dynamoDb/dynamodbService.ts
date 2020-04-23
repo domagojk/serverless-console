@@ -23,11 +23,6 @@ export async function dynamoDbService(
 
     const list = readDirRecursive(tmpChangesDir)
 
-    if (list.length === 0 && pathExistsSync(tmpOriginalDir)) {
-      removeSync(tmpOriginalDir)
-      console.log('removed original')
-    }
-
     const tableDetails = store.getState(service.hash)?.tableDetails
       ? store.getState(service.hash).tableDetails
       : await getTableDetails(service)
@@ -120,6 +115,10 @@ export async function dynamoDbService(
       })
       .filter((val) => val !== null)
       .sort((a, b) => a.timestamp - b.timestamp)
+
+    if (folderListForAll.length === 0 && pathExistsSync(tmpOriginalDir)) {
+      removeSync(tmpOriginalDir)
+    }
 
     store.setState(service.hash, {
       tableName: service.tableName,
