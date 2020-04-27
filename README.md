@@ -4,7 +4,7 @@ Serverless Console is an alternative UI for AWS Cloudwatch. Its focus is on "ser
 
 ## Cloudwatch Logs
 
-![App Preview](./preview-logs.gif)
+![App Preview](./gifs/lambda-logs.gif)
 
 - Log groups are grouped per project and correspond to a single Serverless service
 - Stages are shown per function on its own tab
@@ -14,14 +14,14 @@ Serverless Console is an alternative UI for AWS Cloudwatch. Its focus is on "ser
 
 ## Log Search (Cloudwatch Insights)
 
-![App Preview](./preview-search.gif)
+![App Preview](./gifs/search-logs.gif)
 
 - [Cloudwatch Insights query](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html) for simple search is used by default (but it can be modified)
 - Preserves search history (while the tab is opened)
 
 ## DynamoDB Console (PRO Feature)
 
-![App Preview](./dynamodb.gif)
+![App Preview](./gifs/dynamodb.gif)
 
 \* This feature requires a license
 

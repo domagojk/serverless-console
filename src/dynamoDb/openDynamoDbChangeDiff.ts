@@ -4,6 +4,7 @@ import { Store, DynamoDbFileChange } from '../types'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { readFileSync } from 'fs-extra'
+import { getRemoteItem } from './getRemoteItem'
 
 export async function openDynamoDbChangeDiff(change: DynamoDbFileChange) {
   if (!change) {
@@ -54,13 +55,22 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
     }
 
     try {
-      const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
-      return readFileSync(
-        join(tmpDir, 'original', queryTypeIndex, hashKey, fileName),
-        {
-          encoding: 'utf-8',
-        }
-      )
+      if (fileName.startsWith('delete-')) {
+        const serviceState = this.store.getState(serviceHash)
+        const remoteItem = await getRemoteItem({
+          serviceState,
+          path: uri.path,
+        })
+        return remoteItem.stringified
+      } else {
+        const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
+        return readFileSync(
+          join(tmpDir, 'original', queryTypeIndex, hashKey, fileName),
+          {
+            encoding: 'utf-8',
+          }
+        )
+      }
     } catch (err) {
       vscode.window.showErrorMessage(
         `Error displaying item diff. ${err.message}`

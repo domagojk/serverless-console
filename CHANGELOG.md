@@ -2,6 +2,13 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.5]
+- DynamoDB: Fix delete item diff
+- DynamoDB: Fix set selection on edit item
+
+## [0.6.4]
+- DynamoDB: Fix tmp directory cleanup
+
 ## [0.6.3]
 - DynamoDB: Check if updated property was changed in the meantime
 

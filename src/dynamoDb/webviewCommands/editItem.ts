@@ -62,50 +62,20 @@ export async function editItem(serviceState: ServiceState, message: any) {
       message.payload.selectColumn &&
       json[message.payload.selectColumn] !== undefined
 
-    if (doc.getText()) {
-      if (shouldSelectProperty) {
-        editor.selection = getEditorSelection(
-          doc,
-          space,
-          message.payload.selectColumn
-        )
-      }
-      return
+    if (shouldSelectProperty) {
+      const selection = getEditorSelection(
+        doc,
+        space,
+        message.payload.selectColumn
+      )
+      editor.selection = selection
+
+      setTimeout(() => {
+        // without timeout after change is made after it was previously deleted
+        // selection is canceled for some reason
+        editor.selection = selection
+      }, 100)
     }
-
-    editor.edit((edit) => {
-      edit.insert(new vscode.Position(0, 0), stringified)
-      if (!shouldSelectProperty) {
-        // if there is no text that should be selected
-        // exit the function
-        return
-      }
-
-      // since it seems there is no vscode api which could indicate
-      // that editing document is done
-      // perform a "dirty" check (max 10 times every 25ms)
-      let selectionTimesTried = 0
-      const selectClickedProperty = () => {
-        selectionTimesTried++
-        if (selectionTimesTried > 10) {
-          return
-        }
-
-        if (!doc.getText()) {
-          // doc is not ready yet
-          setTimeout(selectClickedProperty, 25)
-        } else {
-          // doc is ready
-          editor.selection = getEditorSelection(
-            doc,
-            space,
-            message.payload.selectColumn
-          )
-          return
-        }
-      }
-      selectClickedProperty()
-    })
   } catch (err) {
     if (err.code === 'JSON_PARSE_ERROR') {
       // ignore
