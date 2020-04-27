@@ -2,6 +2,10 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.6]
+- DynamoDB: Added conditional check when deleting items
+- DynamoDB: Auto-close editor only when item is saved from webview
+
 ## [0.6.5]
 - DynamoDB: Fix delete item diff
 - DynamoDB: Fix set selection on edit item
