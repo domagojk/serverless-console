@@ -60,7 +60,7 @@ export async function fetchItems(serviceState: ServiceState, message: Message) {
         ({ change, timeAdded }) => {
           return (
             // only include change that is added after last fetch result
-            timeAdded > res.timeFetched,
+            timeAdded > res.timeFetched &&
             // check if the change is affecting current item
             change.json &&
               change.index === index.id &&
