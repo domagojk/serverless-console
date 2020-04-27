@@ -8,7 +8,7 @@ import { fetchItems } from './webviewCommands/fetchItems'
 import { createItem } from './webviewCommands/createItem'
 import { deleteItem } from './webviewCommands/deleteItem'
 import { editItem } from './webviewCommands/editItem'
-import { executeChanges } from './webviewCommands/executeChanges'
+import { executeChanges } from './webviewCommands/executeChanges/executeChanges'
 import { Store } from '../types'
 import { remove } from 'fs-extra'
 import { openDynamoDbChangeDiff } from './openDynamoDbChangeDiff'
@@ -125,7 +125,7 @@ export const openDynamoDb = (
             break
           }
           case 'editItem': {
-            await editItem(serviceState, message)
+            await editItem(store, treeItem.settings.serviceHash, message)
             break
           }
           case 'execute': {

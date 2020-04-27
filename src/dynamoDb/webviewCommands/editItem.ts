@@ -1,11 +1,17 @@
 import * as vscode from 'vscode'
 import { join } from 'path'
-import { ServiceState } from '../../types'
+import { Store } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
 import { getLocalItem } from '../getLocalItem'
 import { writeFileSync, ensureFileSync, pathExists } from 'fs-extra'
 
-export async function editItem(serviceState: ServiceState, message: any) {
+export async function editItem(
+  store: Store,
+  serviceHash: string,
+  message: any
+) {
+  const serviceState = store.getState(serviceHash)
+
   const compositKey =
     message.payload.sortKey !== undefined
       ? `${message.payload.hashKey}-${message.payload.sortKey}`
@@ -50,6 +56,11 @@ export async function editItem(serviceState: ServiceState, message: any) {
     doc,
     vscode.ViewColumn.Beside
   )
+
+  const openedFromWebview = store.getState(serviceHash)?.openedFromWebview || []
+  store.setState(serviceHash, {
+    openedFromWebview: [...openedFromWebview, localDocPath],
+  })
 
   try {
     let content = getLocalItem(localDocPath)

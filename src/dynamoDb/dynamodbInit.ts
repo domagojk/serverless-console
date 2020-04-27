@@ -5,7 +5,7 @@ import {
   DynamoDiffProvider,
   openDynamoDbChangeDiff,
 } from './openDynamoDbChangeDiff'
-import { executeChanges } from './webviewCommands/executeChanges'
+import { executeChanges } from './webviewCommands/executeChanges/executeChanges'
 import { TreeDataProvider } from '../treeDataProvider'
 import { Store } from '../types'
 import { remove } from 'fs-extra'
@@ -64,9 +64,19 @@ export async function dynamodbInit(
 
   vscode.workspace.onDidSaveTextDocument((e) => {
     if (e.uri.fsPath.startsWith(serviceTmpDir)) {
-      vscode.commands.executeCommand('workbench.action.closeActiveEditor')
       const relativePart = e.uri.fsPath.substr(serviceTmpDir.length)
       const [serviceHash] = relativePart.split('/')
+
+      const openedFromWebview = store.getState(serviceHash)?.openedFromWebview
+      if (openedFromWebview?.includes(e.uri.fsPath)) {
+        vscode.commands.executeCommand('workbench.action.closeActiveEditor')
+        store.setState(serviceHash, {
+          openedFromWebview: openedFromWebview.filter(
+            (file) => file !== e.uri.fsPath
+          ),
+        })
+      }
+
       treeDataProvider.refreshService(serviceHash)
     }
   })
