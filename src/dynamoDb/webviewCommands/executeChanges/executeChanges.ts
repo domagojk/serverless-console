@@ -1,11 +1,13 @@
 import * as vscode from 'vscode'
-import { detailedDiff } from 'deep-object-diff'
-import { DynamoDbFileChange, Store, ServiceState } from '../../types'
-import { getRemoteItem } from '../getRemoteItem'
-import { getLocalItem } from '../getLocalItem'
-import { DynamoDB } from 'aws-sdk'
-import { getAwsCredentials } from '../../getAwsCredentials'
 import { remove } from 'fs-extra'
+import { Store, ServiceState } from '../../../types'
+import { getRemoteItem } from '../../getRemoteItem'
+import { shallowObjectDiff } from '../../shallowObjectDiff'
+import { getLocalItem } from '../../getLocalItem'
+import { DynamoDB } from 'aws-sdk'
+import { getAwsCredentials } from '../../../getAwsCredentials'
+import { getUpdateParams } from './getUpdateParams'
+import { getDeleteParams } from './getDeleteParams'
 
 export async function executeChanges(
   store: Store,
@@ -83,19 +85,57 @@ export async function executeChanges(
           })
       } else if (change.action === 'delete') {
         const localItem = getLocalItem(change.absFilePath)
+        const originalItem = getLocalItem(change.absFilePath)
+
         if (!localItem) {
           throw new Error('Unable to parse JSON file.')
         }
 
+        const deleteParams = await getDeleteParams({
+          serviceState,
+          originalItem,
+        })
+
         await dynamoDb
-          .delete({
-            TableName: serviceState.tableName,
-            Key: localItem,
-          })
+          .delete(deleteParams)
           .promise()
+          .catch(async (err) => {
+            if (err.code === 'ConditionalCheckFailedException') {
+              const remoteItem = await getRemoteItem({
+                serviceState,
+                path: change.absFilePath,
+              })
+
+              checkIfChanged(originalItem, remoteItem.json)
+            }
+
+            throw err
+          })
       } else {
-        const updateParams = await getUpdateParams(serviceState, change)
-        await dynamoDb.update(updateParams).promise()
+        const localItem = getLocalItem(change.absFilePath)
+        const originalItem = getLocalItem(change.absFilePathOriginal)
+
+        const { updateParams } = await getUpdateParams({
+          serviceState,
+          localItem,
+          originalItem,
+        })
+
+        await dynamoDb
+          .update(updateParams)
+          .promise()
+          .catch(async (err) => {
+            if (err.code === 'ConditionalCheckFailedException') {
+              const remoteItem = await getRemoteItem({
+                serviceState,
+                path: change.absFilePath,
+              })
+
+              checkIfChanged(originalItem, remoteItem.json)
+            }
+
+            throw err
+          })
       }
 
       // since sussecfull, remove change file
@@ -163,97 +203,31 @@ export async function executeChanges(
   refreshChangesTree()
 }
 
-export async function getUpdateParams(
-  serviceState: ServiceState,
-  change: DynamoDbFileChange
-) {
-  const localItem = getLocalItem(change.absFilePath)
-  const originalItem = getLocalItem(change.absFilePathOriginal)
+function checkIfChanged(localItem, remoteItem, modifiedProps?: string[]) {
+  const remoteDiff: any = shallowObjectDiff(localItem, remoteItem)
 
-  const remoteItem = await getRemoteItem({
-    serviceState,
-    path: change.absFilePath,
-  })
-
-  const remoteDiff: any = detailedDiff(originalItem, remoteItem.json)
-  const modifiedProps = [
-    ...Object.keys(remoteDiff.updated),
-    ...Object.keys(remoteDiff.added),
-    ...Object.keys(remoteDiff.deleted),
+  const modiefedInRemote = [
+    ...remoteDiff.updated,
+    ...remoteDiff.added,
+    ...remoteDiff.deleted,
   ]
 
-  const diff: any = detailedDiff(originalItem, localItem)
-  const tableDesc = serviceState.tableDetails
+  const checkItems = modifiedProps || Object.keys(remoteItem)
 
-  const checkIfChanged = (property) => {
-    if (modifiedProps.includes(property)) {
-      throw new Error(
-        `Property "${property}" was "${String(
-          originalItem[property]
-        )}" when you committed your change, but its current value is: "${String(
-          remoteItem.json[property]
-        )}". Please refresh your query and try again.`
-      )
-    }
-  }
-
-  let AttributeUpdates = Object.keys(diff.updated).reduce((acc, property) => {
-    checkIfChanged(property)
-
-    return {
-      ...acc,
-      [property]: {
-        Action: 'PUT',
-        Value: localItem[property],
-      },
-    }
-  }, {})
-  AttributeUpdates = Object.keys(diff.added).reduce((acc, property) => {
-    checkIfChanged(property)
-
-    return {
-      ...acc,
-      [property]: {
-        Action: 'PUT',
-        Value: localItem[property],
-      },
-    }
-  }, AttributeUpdates)
-  AttributeUpdates = Object.keys(diff.deleted).reduce((acc, property) => {
-    checkIfChanged(property)
-
-    if (localItem[property] !== undefined) {
-      // not entire property is deleted
-      return {
-        ...acc,
-        [property]: {
-          Action: 'PUT',
-          Value: localItem[property],
-        },
-      }
-    } else {
-      return {
-        ...acc,
-        [property]: {
-          Action: 'DELETE',
-          Value: localItem[property],
-        },
+  checkItems.forEach((property) => {
+    if (modiefedInRemote.includes(property)) {
+      if (
+        typeof localItem[property] !== 'object' &&
+        typeof remoteItem[property] !== 'object'
+      ) {
+        throw new Error(
+          `Property "${property}" was "${localItem[property]}" when you committed your change, but its current value is: "${remoteItem[property]}". Please refresh your query and try again.`
+        )
+      } else {
+        throw new Error(
+          `Property "${property}" was changed since you committed your change. Please refresh your query and try again.`
+        )
       }
     }
-  }, AttributeUpdates)
-
-  const updateParams: DynamoDB.DocumentClient.UpdateItemInput = {
-    Key: tableDesc.sortKey
-      ? {
-          [tableDesc.hashKey]: originalItem[tableDesc.hashKey],
-          [tableDesc.sortKey]: originalItem[tableDesc.sortKey],
-        }
-      : {
-          [tableDesc.hashKey]: originalItem[tableDesc.hashKey],
-        },
-    TableName: serviceState.tableName,
-    AttributeUpdates,
-  }
-
-  return updateParams
+  })
 }

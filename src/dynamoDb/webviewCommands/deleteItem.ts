@@ -1,7 +1,7 @@
 import { ServiceState } from '../../types'
-import { getFormattedJSON } from '../getFormattedJSON'
 import { join } from 'path'
 import { outputFile, existsSync } from 'fs-extra'
+import { getFormattedJSON } from '../getFormattedJSON'
 
 export async function deleteItem(serviceState: ServiceState, message: any) {
   const { sortKey, hashKey, index, queryType } = message.payload
@@ -23,18 +23,7 @@ export async function deleteItem(serviceState: ServiceState, message: any) {
 
   const localDocPath = join(localDirPath, fileName)
 
-  const tableDetails = serviceState.tableDetails
+  const originalFormated = getFormattedJSON(message.payload.originalContent)
 
-  const { stringified } = getFormattedJSON(
-    tableDetails.sortKey
-      ? {
-          [tableDetails.hashKey]: hashKey,
-          [tableDetails.sortKey]: sortKey,
-        }
-      : {
-          [tableDetails.hashKey]: hashKey,
-        }
-  )
-
-  await outputFile(localDocPath, stringified)
+  return outputFile(localDocPath, originalFormated.stringified)
 }
