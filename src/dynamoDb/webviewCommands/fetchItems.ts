@@ -137,6 +137,7 @@ async function getItems(serviceState: ServiceState, message: Message) {
           .query({
             TableName: serviceState.tableName,
             Limit: 100,
+            ExclusiveStartKey: message.payload.lastEvaluatedKey,
             IndexName:
               message.payload.index === 'default'
                 ? null

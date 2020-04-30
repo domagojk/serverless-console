@@ -2,6 +2,11 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.8]
+- Log Search: Regex characters are now escaped by default
+- Log Search: Added option to "show results per log stream"
+- DynamoDB: Fixed "load more" when fetching in "query" type
+
 ## [0.6.7]
 - DynamoDB: Fixed bug with refreshing previously updated items
 
