@@ -73,10 +73,9 @@ export async function activate(context: vscode.ExtensionContext) {
     addService(context, store)
   )
 
-  vscode.commands.registerCommand(
-    'serverlessConsole.proVersion',
-    showProOptions
-  )
+  vscode.commands.registerCommand('serverlessConsole.proVersion', () => {
+    showProOptions(context)
+  })
 
   logsInit(context, treeDataProvider)
   dynamodbInit(context, treeDataProvider, store, serviceTmpDir)

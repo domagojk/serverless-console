@@ -25,7 +25,7 @@ export const addService = (
   const staticCss = 'resources/webview/build/static/css'
   const cwd = context.extensionPath
   const localResourceRoot = vscode.Uri.file(join(cwd, 'resources/webview'))
-  const license = await getLicense()
+  const license = await getLicense(context)
 
   if (panel) {
     panel.reveal()
@@ -253,7 +253,7 @@ export const addService = (
         })
       }
     } else if (message.command === 'startTrial') {
-      const license = await startTrialWithNotifications()
+      const license = await startTrialWithNotifications(context)
 
       panel.webview.postMessage({
         messageId: message.messageId,

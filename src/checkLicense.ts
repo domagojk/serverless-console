@@ -9,13 +9,14 @@ const ms30min = 1800000
 let cachedLicense = null as License
 let cacheTimeout = ms24h
 
-export async function getLicense(params?: {
-  skipCache?: boolean
-  licenseKey?: string
-}): Promise<License> {
-  const key =
-    params?.licenseKey ||
-    vscode.workspace.getConfiguration().get('serverlessConsole.licenseKey')
+export async function getLicense(
+  context: vscode.ExtensionContext,
+  params?: {
+    skipCache?: boolean
+    licenseKey?: string
+  }
+): Promise<License> {
+  const key = params?.licenseKey || context.globalState.get('licenseKey')
 
   if (
     !params?.skipCache &&
@@ -79,15 +80,15 @@ export async function getLicense(params?: {
     })
 }
 
-export async function startTrial(): Promise<License> {
+export async function startTrial(
+  context: vscode.ExtensionContext
+): Promise<License> {
   const deviceId = await getDeviceId()
 
   return axios
     .get(`https://api.serverlessconsole.com/startTrial?deviceId=${deviceId}`)
     .then(async (res) => {
-      await vscode.workspace
-        .getConfiguration()
-        .update('serverlessConsole.licenseKey', 'trial', true)
+      context.globalState.update('licenseKey', 'trial')
 
       if (res.status === 200 && res.data) {
         return {
@@ -102,11 +103,9 @@ export async function startTrial(): Promise<License> {
     })
     .catch(async (err) => {
       if (err.response?.data?.alreadyStarted) {
-        await vscode.workspace
-          .getConfiguration()
-          .update('serverlessConsole.licenseKey', 'trial', true)
+        context.globalState.update('licenseKey', 'trial')
 
-        const license = await getLicense()
+        const license = await getLicense(context)
 
         if (license.invalid) {
           vscode.window.showErrorMessage(
@@ -122,7 +121,9 @@ export async function startTrial(): Promise<License> {
     })
 }
 
-export async function startTrialWithNotifications(): Promise<License> {
+export async function startTrialWithNotifications(
+  context: vscode.ExtensionContext
+): Promise<License> {
   return new Promise((resolve, reject) =>
     vscode.window.withProgress(
       {
@@ -133,7 +134,7 @@ export async function startTrialWithNotifications(): Promise<License> {
         progress.report({ increment: 0, message: 'Starting' })
 
         try {
-          const license = await startTrial()
+          const license = await startTrial(context)
 
           progress.report({
             increment: 100,
@@ -162,7 +163,7 @@ export function buyLicense() {
   vscode.env.openExternal(vscode.Uri.parse('https://serverlessconsole.com'))
 }
 
-export async function enterLicense() {
+export async function enterLicense(context: vscode.ExtensionContext) {
   const response = await vscode.window.showInputBox({
     prompt: 'Enter License Key',
   })
@@ -176,16 +177,14 @@ export async function enterLicense() {
       return await vscode.window.showErrorMessage('Invalid License key')
     }
 
-    const check = await getLicense({
+    const check = await getLicense(context, {
       licenseKey: response,
     })
 
     if (check.invalid) {
       await vscode.window.showErrorMessage('Invalid License key')
     } else {
-      await vscode.workspace
-        .getConfiguration()
-        .update('serverlessConsole.licenseKey', response, true)
+      context.globalState.update('licenseKey', response)
 
       await vscode.window.showInformationMessage(
         'License key successfully added!'
@@ -194,16 +193,11 @@ export async function enterLicense() {
   }
 }
 
-export async function showProOptions() {
-  const { expires, invalid, inTrial } = await getLicense({ skipCache: true })
+export async function showProOptions(context: vscode.ExtensionContext) {
+  const { expires, invalid, inTrial } = await getLicense(context, {
+    skipCache: true,
+  })
   let selectedOption
-
-  const remainingDays = moment(expires).diff(moment(), 'days') || 0
-  const dayPlural = remainingDays === 1 ? '' : 's'
-
-  const daysRemaining = `${
-    remainingDays < 0 ? 0 : remainingDays
-  } day${dayPlural}`
 
   if (invalid === true && expires) {
     const warningMessage = inTrial
@@ -231,6 +225,13 @@ export async function showProOptions() {
       'Enter License Key'
     )
   } else if (invalid === false && inTrial && expires) {
+    const remainingDays = moment(expires).diff(moment(), 'days') || 0
+    const dayPlural = remainingDays === 1 ? '' : 's'
+
+    const daysRemaining = `${
+      remainingDays < 0 ? 0 : remainingDays
+    } day${dayPlural}`
+
     selectedOption = await vscode.window.showWarningMessage(
       `Your Serverless Console PRO trial ends in ${daysRemaining}`,
       {
@@ -241,11 +242,12 @@ export async function showProOptions() {
     )
   } else if (invalid === false && inTrial === false && expires) {
     selectedOption = await vscode.window.showWarningMessage(
-      `Your Serverless Console PRO expires in ${daysRemaining}`,
+      `You have successfully activated Serverless Console PRO extension. Your license expires in ${moment(
+        expires
+      ).format('MMMM Do YYYY')}`,
       {
         modal: true,
-      },
-      'Renew'
+      }
     )
   } else if (invalid === false && !expires) {
     await vscode.window.showWarningMessage(
@@ -253,16 +255,12 @@ export async function showProOptions() {
     )
   }
 
-  if (
-    selectedOption === 'Buy Now' ||
-    selectedOption === 'Renew' ||
-    selectedOption === 'More info'
-  ) {
+  if (selectedOption === 'Buy Now' || selectedOption === 'More info') {
     buyLicense()
   } else if (selectedOption === 'Enter License Key') {
-    enterLicense()
+    enterLicense(context)
   } else if (selectedOption === 'Start Trial') {
-    startTrialWithNotifications()
+    startTrialWithNotifications(context)
   }
 }
 

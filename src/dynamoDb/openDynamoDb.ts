@@ -25,7 +25,7 @@ export const openDynamoDb = (
   treeDataProvider: TreeDataProvider,
   store: Store
 ) => async (treeItem: TreeItem) => {
-  let license = await getLicense()
+  let license = await getLicense(context)
 
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
@@ -156,7 +156,7 @@ export const openDynamoDb = (
             break
           }
           case 'showLicenseDialog': {
-            showProOptions()
+            showProOptions(context)
             break
           }
           case 'buyLicense': {
@@ -164,7 +164,7 @@ export const openDynamoDb = (
             break
           }
           case 'enterLicense': {
-            enterLicense()
+            enterLicense(context)
             break
           }
         }

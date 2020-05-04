@@ -17,7 +17,21 @@ export async function dynamodbInit(
   store: Store,
   serviceTmpDir: string
 ) {
-  await getLicense()
+  const oldLicenseKey = await vscode.workspace
+    .getConfiguration()
+    .get('serverlessConsole.licenseKey')
+
+  if (oldLicenseKey) {
+    // temporary migration of license key in context.globalState
+    // should be removed in future
+
+    context.globalState.update('licenseKey', oldLicenseKey)
+    vscode.workspace
+      .getConfiguration()
+      .update('serverlessConsole.licenseKey', undefined, true)
+  }
+
+  await getLicense(context)
 
   vscode.commands.registerCommand(
     'serverlessConsole.openDynamoDb',
