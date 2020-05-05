@@ -82,7 +82,11 @@ export async function dynamodbInit(
       const [serviceHash] = relativePart.split('/')
 
       const openedFromWebview = store.getState(serviceHash)?.openedFromWebview
-      if (openedFromWebview?.includes(e.uri.fsPath)) {
+      const closeAfterSaveOption = vscode.workspace
+        .getConfiguration()
+        .get('serverlessConsole.closeDynamoDbItemAfterSave')
+
+      if (closeAfterSaveOption && openedFromWebview?.includes(e.uri.fsPath)) {
         vscode.commands.executeCommand('workbench.action.closeActiveEditor')
         store.setState(serviceHash, {
           openedFromWebview: openedFromWebview.filter(
