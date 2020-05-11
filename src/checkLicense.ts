@@ -2,7 +2,15 @@ import * as vscode from 'vscode'
 import * as moment from 'moment'
 import { machineId } from 'node-machine-id'
 import axios from 'axios'
-import { License } from './types'
+
+type License = {
+  invalid: boolean
+  expires: number
+  inTrial: boolean
+  licenseKey?: string
+  deviceId?: string
+  checked?: number
+}
 
 const ms24h = 86400000
 const ms30min = 1800000

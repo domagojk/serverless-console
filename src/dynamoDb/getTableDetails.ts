@@ -1,9 +1,10 @@
-import { Service, DynamoDbTableDesc, Store } from '../types'
 import { DynamoDB } from 'aws-sdk'
 import { getAwsCredentials } from '../getAwsCredentials'
+import { Store, DynamoDbTableDesc } from '../store'
+import { DynamoServiceOutput } from './dynamodbService'
 
 export async function getTableDetails(
-  service: Service
+  service: DynamoServiceOutput
 ): Promise<DynamoDbTableDesc> {
   const credentials = await getAwsCredentials(service.awsProfile)
   const dynamoDb = new DynamoDB({
@@ -54,7 +55,7 @@ export async function getTableDetails(
 }
 
 export async function getDynamoDbServiceContext(
-  service: Service,
+  service: DynamoServiceOutput,
   store: Store
 ) {
   const serviceState = store.getState(service.hash)

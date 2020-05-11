@@ -1,7 +1,7 @@
 import { DynamoDB } from 'aws-sdk'
 import { getAwsCredentials } from '../../getAwsCredentials'
-import { getFilterExpression } from '../getFilterExpression'
-import { Comparison, ServiceState } from '../../types'
+import { getFilterExpression, Comparison } from '../getFilterExpression'
+import { ServiceState } from '../../store'
 
 type Message = {
   payload: {
@@ -63,9 +63,9 @@ export async function fetchItems(serviceState: ServiceState, message: Message) {
             timeAdded > res.timeFetched &&
             // check if the change is affecting current item
             change.json &&
-              change.index === index.id &&
-              change.queryType === message.payload.queryType &&
-              change.compositKey === item.id
+            change.index === index.id &&
+            change.queryType === message.payload.queryType &&
+            change.compositKey === item.id
           )
         }
       )

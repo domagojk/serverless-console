@@ -1,5 +1,5 @@
-import { ServiceState } from '../../../types'
 import { getUpdateParams } from './getUpdateParams'
+import { ServiceState } from '../../../store'
 
 export async function getDeleteParams({
   serviceState,

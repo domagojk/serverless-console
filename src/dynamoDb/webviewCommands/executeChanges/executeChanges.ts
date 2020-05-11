@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import { remove } from 'fs-extra'
-import { Store, ServiceState } from '../../../types'
 import { getRemoteItem } from '../../getRemoteItem'
 import { shallowObjectDiff } from '../../shallowObjectDiff'
 import { getLocalItem } from '../../getLocalItem'
@@ -8,6 +7,7 @@ import { DynamoDB } from 'aws-sdk'
 import { getAwsCredentials } from '../../../getAwsCredentials'
 import { getUpdateParams } from './getUpdateParams'
 import { getDeleteParams } from './getDeleteParams'
+import { Store } from '../../../store'
 
 export async function executeChanges(
   store: Store,

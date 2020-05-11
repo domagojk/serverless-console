@@ -9,7 +9,6 @@ import { createItem } from './webviewCommands/createItem'
 import { deleteItem } from './webviewCommands/deleteItem'
 import { editItem } from './webviewCommands/editItem'
 import { executeChanges } from './webviewCommands/executeChanges/executeChanges'
-import { Store } from '../types'
 import { remove } from 'fs-extra'
 import { openDynamoDbChangeDiff } from './openDynamoDbChangeDiff'
 import { dynamoDbOptions } from './webviewCommands/dynamodbOptions'
@@ -19,12 +18,18 @@ import {
   enterLicense,
   getLicense,
 } from '../checkLicense'
+import { refreshService } from '../refreshServices'
+import { Store } from '../store'
+
+type DynamoCommandData = {
+  title: string
+  serviceHash: string
+}
 
 export const openDynamoDb = (
   context: vscode.ExtensionContext,
-  treeDataProvider: TreeDataProvider,
   store: Store
-) => async (treeItem: TreeItem) => {
+) => async (treeItem: TreeItem, commandData: DynamoCommandData) => {
   let license = await getLicense(context)
 
   const staticJs = 'resources/webview/build/static/js'
@@ -36,7 +41,7 @@ export const openDynamoDb = (
   )
 
   if (!treeItem.panel) {
-    const { title } = treeDataProvider.getService(treeItem.settings.serviceHash)
+    const title = commandData.title
 
     treeItem.panel = vscode.window.createWebviewPanel(
       'slsConsoledynamodb',
@@ -88,11 +93,11 @@ export const openDynamoDb = (
         type: 'changesUpdated',
       })
     }
-    store.subscribe(subscriber, treeItem.settings.serviceHash)
+    store.subscribe(subscriber, commandData.serviceHash)
 
     treeItem.panel.webview.onDidReceiveMessage(
       async (message) => {
-        const serviceState = store.getState(treeItem.settings.serviceHash)
+        const serviceState = store.getState(commandData.serviceHash)
 
         switch (message.command) {
           case 'describeTable': {
@@ -121,16 +126,16 @@ export const openDynamoDb = (
           }
           case 'deleteItem': {
             await deleteItem(serviceState, message)
-            treeDataProvider.refreshService(treeItem.settings.serviceHash)
+            refreshService(store, commandData.serviceHash)
             break
           }
           case 'editItem': {
-            await editItem(store, treeItem.settings.serviceHash, message)
+            await editItem(store, commandData.serviceHash, message)
             break
           }
           case 'execute': {
-            await executeChanges(store, treeItem.settings.serviceHash, () => {
-              treeDataProvider.refreshService(treeItem.settings.serviceHash)
+            await executeChanges(store, commandData.serviceHash, () => {
+              refreshService(store, commandData.serviceHash)
             })
             break
           }
@@ -140,7 +145,7 @@ export const openDynamoDb = (
             )
             if (change) {
               await remove(change.absFilePath)
-              treeDataProvider.refreshService(treeItem.settings.serviceHash)
+              refreshService(store, commandData.serviceHash)
             }
             break
           }
@@ -175,7 +180,7 @@ export const openDynamoDb = (
 
     treeItem.panel.onDidDispose(() => {
       delete treeItem.panel
-      store.unsubscribe(subscriber, treeItem.settings.serviceHash)
+      store.unsubscribe(subscriber, commandData.serviceHash)
     })
   }
   treeItem.panel.reveal()

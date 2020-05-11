@@ -1,4 +1,3 @@
-import { ServiceState } from '../types'
 import { join } from 'path'
 import { DynamoDB } from 'aws-sdk'
 import { uniq } from 'lodash'
@@ -6,6 +5,7 @@ import { getAwsCredentials } from '../getAwsCredentials'
 import { getFilterExpression } from './getFilterExpression'
 import { getFormattedJSON } from './getFormattedJSON'
 import { getLocalItem } from './getLocalItem'
+import { ServiceState } from '../store'
 
 export async function getRemoteItem({
   serviceState,

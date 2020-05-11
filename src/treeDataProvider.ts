@@ -1,214 +1,76 @@
 import * as vscode from 'vscode'
 import { TreeItem } from './TreeItem'
-import { Service, Store } from './types'
-import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
-import { cloudformationService } from './logs/cloudformationService'
-import { dynamoDbService } from './dynamoDb/dynamodbService'
+import { Store } from './store'
 
 export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | null> = new vscode.EventEmitter<TreeItem | null>()
   readonly onDidChangeTreeData: vscode.Event<TreeItem | null> = this
     ._onDidChangeTreeData.event
   noFolder: boolean
-  services: Service[]
-  extensionPath: string
+  context: vscode.ExtensionContext
   store: Store
 
   constructor({
     store,
-    services = [],
     noFolder,
-    extensionPath,
+    context,
   }: {
     store: Store
-    services: Service[]
     noFolder?: boolean
-    extensionPath: string
+    context: vscode.ExtensionContext
   }) {
     this.store = store
-    this.services = services
     this.noFolder = noFolder
-    this.extensionPath = extensionPath
+    this.context = context
+
+    store.subscribeToSlsConsoleFiles(() => {
+      this._onDidChangeTreeData.fire()
+    })
   }
 
   getTreeItem(element: TreeItem): vscode.TreeItem {
     return element
   }
 
-  async getChildren(element?: TreeItem): Promise<TreeItem[]> {
+  async getChildren(element?: vscode.TreeItem): Promise<TreeItem[]> {
     if (!element) {
       if (this.noFolder) {
         return [
           new TreeItem(
             {
-              extensionPath: this.extensionPath,
+              context: this.context,
+              id: 'noitem',
               label: 'You have not yet opened a folder.',
-              isService: true,
             },
             vscode.TreeItemCollapsibleState.None
           ),
         ]
       }
-
-      const collapsibleState =
-        this.services.length > 1
-          ? vscode.TreeItemCollapsibleState.Collapsed
-          : vscode.TreeItemCollapsibleState.Expanded
-
-      if (this.services.length === 0) {
-        return [
-          new TreeItem(
-            {
-              extensionPath: this.extensionPath,
-              label: 'Click to add a service...',
-              isService: true,
-            },
-            vscode.TreeItemCollapsibleState.None,
-            {
-              command: 'serverlessConsole.addService',
-              title: 'Add a service',
-              arguments: [],
-            }
-          ),
-        ]
-      }
-      return this.services.map((service) => {
-        if (service.isLoading) {
-          return new TreeItem(
-            {
-              extensionPath: this.extensionPath,
-              label: service.command
-                ? service.title || `executing "${service.command}"...`
-                : service.title || '',
-              icon: 'loading',
-              isService: true,
-              serviceHash: service.hash,
-            },
-            collapsibleState
-          )
-        }
-
-        if (service.error) {
-          return new TreeItem(
-            {
-              extensionPath: this.extensionPath,
-              label: service.command
-                ? `error running "${service.command}"`
-                : service.title,
-              isService: true,
-              icon: 'error',
-              serviceHash: service.hash,
-            },
-            vscode.TreeItemCollapsibleState.None,
-            {
-              command: 'slsConsoleTree.showError',
-              title: 'show error',
-              arguments: [service.error],
-            }
-          )
-        }
-
-        return new TreeItem(
-          {
-            extensionPath: this.extensionPath,
-            label: service.title,
-            icon: service.icon,
-            isService: true,
-            serviceHash: service.hash,
-          },
-          collapsibleState
-        )
-      })
-    } else {
-      const service = this.getService(element.settings.serviceHash)
-      const items = element.settings.isService
-        ? service?.items
-        : element.settings?.serviceItem?.items
-
-      return items?.map((item) => {
-        return new TreeItem(
-          {
-            extensionPath: this.extensionPath,
-            ...element.settings,
-            dir: item.dir,
-            isService: false,
-            label: item.title,
-            localSrc: item.uri,
-            description: item.description,
-            serviceItem: item,
-            icon: item.icon,
-            command: item.command,
-            contextValue: item.contextValue,
-          },
-          item.collapsibleState ?? vscode.TreeItemCollapsibleState.None
-        )
-      })
-    }
-  }
-
-  refreshServices(services: Service[], options?: { refreshAll?: boolean }) {
-    this.services = services.map((newService) => {
-      // adding "isLoading" to all services that have changed
-      // or if "refreshAll" is used, all services are refresh no matter if the hash changed
-      const oldService = this.services.find((s) => s.hash === newService.hash)
-
-      if (options?.refreshAll || !oldService) {
-        return {
-          ...newService,
-          isLoading: newService.type === 'custom' ? false : true,
-        }
-      } else {
-        return oldService
-      }
-    })
-    this._onDidChangeTreeData.fire()
-
-    // looping trough all "isLoading" services and applying appropriate handler
-    // when handler is done, service is updated (mutated this.services by finding the hash)
-    return Promise.all(
-      this.services
-        .filter((s) => s.isLoading)
-        .map((service) => {
-          this.refreshService(service.hash)
-        })
-    )
-  }
-
-  async refreshService(serviceHash: string) {
-    const service = this.getService(serviceHash)
-    const handler =
-      service.type === 'serverlessFramework'
-        ? serverlessFrameworkService
-        : service.type === 'cloudformation'
-        ? cloudformationService
-        : service.type === 'dynamodb'
-        ? dynamoDbService
-        : null
-
-    if (handler) {
-      const updatedService = await handler(service, this.store)
-      this.mutateServiceByHash({
-        ...updatedService,
-        isLoading: false,
-      })
-      return updatedService
     }
 
-    return service
-  }
-
-  mutateServiceByHash(service: Service) {
-    this.services = this.services.map((s) => {
-      if (s.hash === service.hash) {
-        return service
+    const treeItems = this.store.getSlsConsoleFiles().filter((treeItem) => {
+      if (!element) {
+        return !treeItem.parent
       } else {
-        return s
+        return treeItem.parent === element.id
       }
     })
-    this._onDidChangeTreeData.fire()
-  }
 
-  getService(serviceHash: string) {
-    return this.services.find((s) => s.hash === serviceHash)
+    return treeItems.map((treeItem) => {
+      return new TreeItem(
+        {
+          context: this.context,
+          label: treeItem.title,
+          id: treeItem.id,
+          icon: treeItem.icon,
+          description: treeItem.description,
+          command: treeItem.command,
+          localSrc: treeItem.uri,
+          contextValue: treeItem.contextValue,
+          serviceHash: treeItem.serviceHash,
+        },
+        treeItem.collapsibleState
+      )
+    })
   }
 }

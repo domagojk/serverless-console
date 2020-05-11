@@ -1,17 +1,7 @@
 import * as vscode from 'vscode'
-import { TreeDataProvider } from '../treeDataProvider'
-import { openFunction } from './openFunction'
 import { openLogs } from './openLogs'
 
-export function logsInit(
-  context: vscode.ExtensionContext,
-  treeDataProvider: TreeDataProvider
-) {
-  vscode.commands.registerCommand(
-    'serverlessConsole.openFunction',
-    openFunction
-  )
-
+export function logsInit(context: vscode.ExtensionContext) {
   let webviewErroPanel: vscode.WebviewPanel = null
 
   vscode.commands.registerCommand('slsConsoleTree.showError', async (error) => {
@@ -36,6 +26,6 @@ export function logsInit(
 
   vscode.commands.registerCommand(
     'serverlessConsole.openLogs',
-    openLogs(context, treeDataProvider)
+    openLogs(context)
   )
 }

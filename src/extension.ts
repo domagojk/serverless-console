@@ -1,66 +1,65 @@
 import * as vscode from 'vscode'
 import { TreeDataProvider } from './treeDataProvider'
-import { getServices } from './settings'
 import { removeService } from './removeService'
 import { addService } from './addService'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { createStore } from './store'
-import { cleanEmptyDirs } from './cleanEmptyDirs'
 import { dynamodbInit } from './dynamoDb/dynamodbInit'
 import { logsInit } from './logs/logsInit'
 import { showProOptions } from './checkLicense'
+import { refreshServices } from './refreshServices'
+import { openFile } from './openFile'
+import { Store } from './store'
+import { CloudformationOutput } from './logs/cloudformationService'
+import { CustomLogsOutput } from './logs/customService'
+import { DynamoServiceOutput } from './dynamoDb/dynamodbService'
+import { ServerlessFrameworkOutput } from './logs/serverlessFrameworkService'
+
+export type Service =
+  | ServerlessFrameworkOutput
+  | CloudformationOutput
+  | CustomLogsOutput
+  | DynamoServiceOutput
 
 export async function activate(context: vscode.ExtensionContext) {
-  const store = createStore()
+  const store = new Store()
 
   if (!vscode.workspace.workspaceFolders) {
     vscode.window.registerTreeDataProvider(
       'slsConsoleTree',
       new TreeDataProvider({
+        context,
         store,
-        services: [],
         noFolder: true,
-        extensionPath: context.extensionPath,
       })
     )
     return null
   }
 
-  // sls print commands saved in settings
-  const services = getServices()
-
   // tmp directory (used for saving dynamodb changes)
   const serviceTmpDir = join(tmpdir(), 'vscode-sls-console/')
 
-  services.forEach((service) => {
-    if (service.type === 'dynamodb') {
-      cleanEmptyDirs(join(serviceTmpDir, service.hash))
-    }
-  })
+  refreshServices(store)
 
   // Tree Provider instances
   const treeDataProvider = new TreeDataProvider({
+    context,
     store,
-    services,
-    extensionPath: context.extensionPath,
   })
 
   // register tree data providers
   vscode.window.registerTreeDataProvider('slsConsoleTree', treeDataProvider)
 
-  treeDataProvider.refreshServices(services, { refreshAll: true })
-
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('serverlessConsole.services')) {
-        treeDataProvider.refreshServices(getServices())
+        refreshServices(store)
       }
     })
   )
 
   vscode.commands.registerCommand('serverlessConsole.refreshEntry', () => {
-    treeDataProvider.refreshServices(getServices(), { refreshAll: true })
+    refreshServices(store)
   })
 
   vscode.commands.registerCommand(
@@ -70,15 +69,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.registerCommand(
     'serverlessConsole.addService',
-    addService(context, store)
+    addService(context)
   )
 
   vscode.commands.registerCommand('serverlessConsole.proVersion', () => {
     showProOptions(context)
   })
 
-  logsInit(context, treeDataProvider)
-  dynamodbInit(context, treeDataProvider, store, serviceTmpDir)
+  vscode.commands.registerCommand('serverlessConsole.openFile', openFile)
+
+  logsInit(context)
+  dynamodbInit(context, store, serviceTmpDir)
 }
 
 // this method is called when your extension is deactivated

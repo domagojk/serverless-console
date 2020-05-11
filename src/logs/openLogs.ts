@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import { TreeItem } from '../TreeItem'
 import { join } from 'path'
 import { getWebviewHtml } from './functionLogsWebview'
 import {
@@ -11,12 +10,25 @@ import {
 } from '../settings'
 import { getAwsCredentials } from '../getAwsCredentials'
 import { CloudWatchLogs, Lambda } from 'aws-sdk'
-import { TreeDataProvider } from '../treeDataProvider'
+import { TreeItem } from '../TreeItem'
 
-export const openLogs = (
-  context: vscode.ExtensionContext,
-  treeDataProvider: TreeDataProvider
-) => async (treeItem: TreeItem) => {
+type LogsCommandData = {
+  region: string
+  awsProfile: string
+  timeOffsetInMs: number
+  tabs: {
+    title: string
+    logs: string
+    lambda: string
+    awsProfile: string
+    region: string
+  }[]
+}
+
+export const openLogs = (context: vscode.ExtensionContext) => async (
+  treeItem: TreeItem,
+  commandData: LogsCommandData
+) => {
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const extesionPath = context.extensionPath
@@ -57,7 +69,7 @@ export const openLogs = (
           autoRefreshInterval: ${getAutoRefreshInterval()},
           fontSize: "${getFontSize()}",
           fontFamily: "${getFontFamily()}",
-          tabs: ${JSON.stringify(treeItem.settings.serviceItem.tabs)}
+          tabs: ${JSON.stringify(commandData.tabs)}
         }
       `,
     })
@@ -73,10 +85,6 @@ export const openLogs = (
 
     treeItem.panel.webview.onDidReceiveMessage(
       async (message) => {
-        const service = treeDataProvider.getService(
-          treeItem.settings.serviceHash
-        )
-
         switch (message.command) {
           case 'setAutoRefresh': {
             const newVal = message.payload.enabled ? autoRefreshEnabledVal : 0
@@ -102,11 +110,11 @@ export const openLogs = (
 
             try {
               const credentials = await getAwsCredentials(
-                message.payload.awsProfile || service.awsProfile
+                message.payload.awsProfile || commandData.awsProfile
               )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region,
+                region: message.payload.region || commandData.region,
               })
 
               const logStreams = await cloudwatchlogs
@@ -129,8 +137,8 @@ export const openLogs = (
 
                     return {
                       ...logStream,
-                      sortByTimestamp: service.timeOffsetInMs
-                        ? timestamp + service.timeOffsetInMs
+                      sortByTimestamp: commandData.timeOffsetInMs
+                        ? timestamp + commandData.timeOffsetInMs
                         : timestamp,
                     }
                   }),
@@ -163,11 +171,11 @@ export const openLogs = (
 
               try {
                 const credentials = await getAwsCredentials(
-                  message.payload.awsProfile || service.awsProfile
+                  message.payload.awsProfile || commandData.awsProfile
                 )
                 const cloudwatchlogs = new CloudWatchLogs({
                   credentials,
-                  region: message.payload.region || service.region,
+                  region: message.payload.region || commandData.region,
                 })
 
                 const log = await cloudwatchlogs
@@ -185,8 +193,8 @@ export const openLogs = (
                     logEvents: log.events.map((log) => {
                       return {
                         ...log,
-                        timestamp: service.timeOffsetInMs
-                          ? log.timestamp + service.timeOffsetInMs
+                        timestamp: commandData.timeOffsetInMs
+                          ? log.timestamp + commandData.timeOffsetInMs
                           : log.timestamp,
                       }
                     }),
@@ -210,11 +218,11 @@ export const openLogs = (
           case 'getLambdaOverview': {
             try {
               const credentials = await getAwsCredentials(
-                message.payload.awsProfile || service.awsProfile
+                message.payload.awsProfile || commandData.awsProfile
               )
               const lambda = new Lambda({
                 credentials,
-                region: message.payload.region || service.region,
+                region: message.payload.region || commandData.region,
               })
 
               const lambdaOverview = await lambda
@@ -249,11 +257,11 @@ export const openLogs = (
           case 'startQuery': {
             try {
               const credentials = await getAwsCredentials(
-                message.payload.awsProfile || service.awsProfile
+                message.payload.awsProfile || commandData.awsProfile
               )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region,
+                region: message.payload.region || commandData.region,
               })
 
               const { queryId } = await cloudwatchlogs
@@ -288,11 +296,11 @@ export const openLogs = (
           case 'getQueryResults': {
             try {
               const credentials = await getAwsCredentials(
-                message.payload.awsProfile || service.awsProfile
+                message.payload.awsProfile || commandData.awsProfile
               )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region,
+                region: message.payload.region || commandData.region,
               })
 
               const res = await cloudwatchlogs
@@ -323,11 +331,11 @@ export const openLogs = (
           case 'stopQuery': {
             try {
               const credentials = await getAwsCredentials(
-                message.payload.awsProfile || service.awsProfile
+                message.payload.awsProfile || commandData.awsProfile
               )
               const cloudwatchlogs = new CloudWatchLogs({
                 credentials,
-                region: message.payload.region || service.region,
+                region: message.payload.region || commandData.region,
               })
 
               await cloudwatchlogs

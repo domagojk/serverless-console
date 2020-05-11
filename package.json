@@ -10,6 +10,7 @@
     "url": "https://github.com/domagojk/serverless-console.git"
   },
   "bugs": "https://github.com/domagojk/serverless-console/issues",
+  "homepage": "https://serverlessconsole.com",
   "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.38.0"
@@ -27,7 +28,7 @@
   "activationEvents": [
     "onView:slsConsoleTree"
   ],
-  "main": "./dist/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "configuration": {
       "title": "Serverless Console",
@@ -175,8 +176,8 @@
         }
       },
       {
-        "command": "serverlessConsole.openFunction",
-        "title": "Open function",
+        "command": "serverlessConsole.openFile",
+        "title": "Open file",
         "icon": {
           "light": "resources/light/open-file.svg",
           "dark": "resources/dark/open-file.svg"
@@ -253,8 +254,13 @@
           "when": "view == slsConsoleTree && viewItem == service"
         },
         {
-          "command": "serverlessConsole.openFunction",
-          "when": "view == slsConsoleTree && viewItem == function-localRef",
+          "command": "serverlessConsole.openFile",
+          "when": "view == slsConsoleTree && viewItem == local-file",
+          "group": "inline"
+        },
+        {
+          "command": "serverlessConsole.openFile",
+          "when": "view == slsConsoleTree && viewItem == dynamodb-change",
           "group": "inline"
         },
         {

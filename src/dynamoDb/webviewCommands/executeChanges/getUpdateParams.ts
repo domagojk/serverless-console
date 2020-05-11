@@ -1,6 +1,6 @@
-import { ServiceState } from '../../../types'
 import { shallowObjectDiff } from '../../shallowObjectDiff'
 import { DynamoDB } from 'aws-sdk'
+import { ServiceState } from '../../../store'
 
 export async function getUpdateParams({
   serviceState,

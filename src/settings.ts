@@ -1,9 +1,9 @@
 import * as vscode from 'vscode'
 import * as path from 'path'
-import { Service } from './types'
 import { createHash } from 'crypto'
+import { Service } from './extension'
 
-export function getServices(initial?: boolean): Service[] {
+export function getServices(): Service[] {
   let services: any[] = vscode.workspace
     .getConfiguration()
     .get('serverlessConsole.services')
@@ -25,38 +25,18 @@ export function prepareService(conf) {
     return {
       ...conf,
       hash,
-      cwd: path.join(workspaceDir, conf.cwd)
-    }
-  } else if (conf.type === 'custom') {
-    return {
-      ...conf,
-      icon: 'serverless-logs.png',
-      items: conf.items?.map(item => {
-        const isLambda = item.tabs?.find(t => t.lambda)
-        const isCloudwatchLog = item.tabs?.find(t => t.logs)
-
-        return {
-          ...item,
-          command: {
-            command: 'serverlessConsole.openLogs',
-            title: 'Open Logs'
-          },
-          icon: isLambda ? 'lambda' : isCloudwatchLog ? 'cloudwatch' : null
-        }
-      })
+      cwd: path.join(workspaceDir, conf.cwd),
     }
   } else {
     return {
       ...conf,
-      hash
+      hash,
     }
   }
 }
 
 export function getServiceHash(service) {
-  return createHash('md5')
-    .update(JSON.stringify(service))
-    .digest('hex')
+  return createHash('md5').update(JSON.stringify(service)).digest('hex')
 }
 
 export function getGroupPerRequest(): Boolean {

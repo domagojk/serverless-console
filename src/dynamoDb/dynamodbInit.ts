@@ -6,17 +6,27 @@ import {
   openDynamoDbChangeDiff,
 } from './openDynamoDbChangeDiff'
 import { executeChanges } from './webviewCommands/executeChanges/executeChanges'
-import { TreeDataProvider } from '../treeDataProvider'
-import { Store } from '../types'
 import { remove } from 'fs-extra'
 import { getLicense } from '../checkLicense'
+import { getServices } from '../settings'
+import { join } from 'path'
+import { cleanEmptyDirs } from '../cleanEmptyDirs'
+import { refreshService } from '../refreshServices'
+import { Store, DynamoDbFileChange } from '../store'
 
 export async function dynamodbInit(
   context: vscode.ExtensionContext,
-  treeDataProvider: TreeDataProvider,
   store: Store,
   serviceTmpDir: string
 ) {
+  // clean empty dirs
+  const services = getServices()
+  services.forEach((service) => {
+    if (service.type === 'dynamodb') {
+      cleanEmptyDirs(join(serviceTmpDir, service.hash))
+    }
+  })
+
   const oldLicenseKey = await vscode.workspace
     .getConfiguration()
     .get('serverlessConsole.licenseKey')
@@ -35,15 +45,16 @@ export async function dynamodbInit(
 
   vscode.commands.registerCommand(
     'serverlessConsole.openDynamoDb',
-    openDynamoDb(context, treeDataProvider, store)
+    openDynamoDb(context, store)
   )
 
   vscode.commands.registerCommand(
     'serverlessConsole.openDynamoDbItemDiff',
-    async (treeItem: TreeItem) => {
-      const serviceState = store.getState(treeItem.settings.serviceHash)
-      const change = serviceState.changes.find((c) => c.name === treeItem.label)
-      openDynamoDbChangeDiff(change)
+    async (
+      treeItem: TreeItem,
+      openDiffCommand: { change: DynamoDbFileChange }
+    ) => {
+      openDynamoDbChangeDiff(openDiffCommand.change)
     }
   )
 
@@ -54,7 +65,7 @@ export async function dynamodbInit(
         return null
       }
       await executeChanges(store, treeItem.settings.serviceHash, () => {
-        treeDataProvider.refreshService(treeItem.settings.serviceHash)
+        refreshService(store, treeItem.settings.serviceHash)
       })
     }
   )
@@ -62,16 +73,16 @@ export async function dynamodbInit(
   vscode.commands.registerCommand(
     'serverlessConsole.dynamodbDiscardChange',
     async (treeItem: TreeItem) => {
-      if (!treeItem?.settings?.serviceHash) {
+      if (!treeItem?.serviceHash) {
         return null
       }
-      const serviceState = store.getState(treeItem.settings.serviceHash)
+      const serviceState = store.getState(treeItem.serviceHash)
       const change = serviceState?.changes?.find(
         (c) => c.name === treeItem.label
       )
       if (change) {
         await remove(change.absFilePath)
-        treeDataProvider.refreshService(treeItem.settings.serviceHash)
+        refreshService(store, treeItem.serviceHash)
       }
     }
   )
@@ -95,14 +106,14 @@ export async function dynamodbInit(
         })
       }
 
-      treeDataProvider.refreshService(serviceHash)
+      refreshService(store, serviceHash)
     }
   })
 
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(
       'dynamodb-item-diff',
-      new DynamoDiffProvider(treeDataProvider, store)
+      new DynamoDiffProvider()
     )
   )
 }

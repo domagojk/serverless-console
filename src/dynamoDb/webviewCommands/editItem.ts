@@ -1,9 +1,9 @@
 import * as vscode from 'vscode'
 import { join } from 'path'
-import { Store } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
 import { getLocalItem } from '../getLocalItem'
 import { writeFileSync, ensureFileSync, pathExists } from 'fs-extra'
+import { Store } from '../../store'
 
 export async function editItem(
   store: Store,

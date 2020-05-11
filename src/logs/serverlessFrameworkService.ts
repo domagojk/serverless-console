@@ -2,10 +2,39 @@ import { spawn } from 'cross-spawn'
 import * as vscode from 'vscode'
 import * as YAML from 'yaml'
 import * as path from 'path'
-import { Service } from '../types'
 import { readdirSync } from 'fs'
 
-export type ServerlessYML = {
+interface ServerlessFrameworkInput {
+  hash: string
+  awsProfile: string
+  type: 'serverlessFramework'
+  timeOffsetInMs?: number
+  region?: string
+  title?: string
+  cwd?: string
+  command?: string
+  stages?: any[]
+  envVars?: { key: string; value: string }[]
+}
+
+export interface ServerlessFrameworkOutput extends ServerlessFrameworkInput {
+  icon?: string
+  error?: string
+  items?: {
+    title?: string
+    description?: string
+    command?: {
+      command: string
+      title: string
+      arguments?: any[]
+    }
+    uri?: any
+    icon?: string
+    contextValue?: string
+  }[]
+}
+
+type ServerlessYML = {
   org: string
   service: {
     name: string
@@ -29,15 +58,17 @@ export type ServerlessYML = {
   >
 }
 
-export const serverlessDefaults = {
+const serverlessDefaults = {
   provider: {
     region: 'us-east-1',
-    stage: 'dev'
-  }
+    stage: 'dev',
+  },
 }
 
-export function serverlessFrameworkService(service: Service): Promise<Service> {
-  return new Promise(resolve => {
+export function serverlessFrameworkService(
+  service: ServerlessFrameworkInput
+): Promise<ServerlessFrameworkOutput> {
+  return new Promise((resolve) => {
     // using spawn instead of exec
     // because there was use case when stdout retutned a correct definition,
     // and yet after 5+ seconds, stderr returned "socket hang up" error
@@ -54,17 +85,17 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
               ...service.envVars.reduce((acc, curr) => {
                 return {
                   ...acc,
-                  [curr.key]: curr.value
+                  [curr.key]: curr.value,
                 }
-              }, {})
-            }
+              }, {}),
+            },
           })
         : spawn(commandArr[0], commandArr.slice(1), {
             cwd: service.cwd,
             env: {
               ...process.env,
-              SLS_WARNING_DISABLE: '*'
-            }
+              SLS_WARNING_DISABLE: '*',
+            },
           })
 
     let stdout = ''
@@ -90,13 +121,13 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           ...outputJson,
           provider: {
             ...serverlessDefaults.provider,
-            ...outputJson.provider
-          }
+            ...outputJson.provider,
+          },
         }
 
         if (typeof yml.service === 'string') {
           yml.service = {
-            name: yml.service
+            name: yml.service,
           }
         }
 
@@ -104,17 +135,17 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           resolve({
             ...service,
             error: 'only aws provider is supported at the moment',
-            items: []
+            items: [],
           })
         }
 
         if (Array.isArray(yml.functions)) {
           let functionsArr = yml.functions
           yml.functions = {}
-          functionsArr.forEach(fun => {
+          functionsArr.forEach((fun) => {
             yml.functions = {
               ...yml.functions,
-              ...fun
+              ...fun,
             }
           })
         }
@@ -124,7 +155,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
           title: service.title || yml.service.name,
           region: service.region || yml.provider.region,
           icon: 'serverless-logs.png',
-          items: Object.keys(yml.functions).map(fnName => {
+          items: Object.keys(yml.functions).map((fnName) => {
             const handler = yml.functions[fnName].handler
             const handlerArr = handler.split('/')
             const handlerRelativeDir = handlerArr
@@ -136,7 +167,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
             let foundFile
             try {
               const filesInDir = readdirSync(handlerAbsDir)
-              foundFile = filesInDir.find(fileName => {
+              foundFile = filesInDir.find((fileName) => {
                 const nameArr = fileName.split('.')
                 const handlerFileName = handlerArr[handlerArr.length - 1].split(
                   '.'
@@ -148,7 +179,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
             const httpEvent =
               yml.functions[fnName].events &&
               yml.functions[fnName].events.length
-                ? yml.functions[fnName].events.find(event => event.http)
+                ? yml.functions[fnName].events.find((event) => event.http)
                 : null
 
             return {
@@ -162,30 +193,37 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
                     httpEvent.http.path
                   }`
                 : null,
-              tabs: service.stages.map((stage) => {
-                if (typeof stage === 'string') {
-                  return {
-                    title: stage,
-                    logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
-                    lambda: `${yml.service.name}-${stage}-${fnName}`,
-                  }
-                } else {
-                  return {
-                    title: stage.title || stage.stage,
-                    logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
-                    lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
-                    awsProfile: stage.awsProfile,
-                    region: stage.region,
-                  }
-                }
-              }),
               command: {
                 command: 'serverlessConsole.openLogs',
-                title: 'Open Logs'
+                title: 'Open Logs',
+                arguments: [
+                  {
+                    region: service.region || yml.provider.region,
+                    awsProfile: service.awsProfile,
+                    timeOffsetInMs: service.timeOffsetInMs,
+                    tabs: service.stages.map((stage) => {
+                      if (typeof stage === 'string') {
+                        return {
+                          title: stage,
+                          logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
+                          lambda: `${yml.service.name}-${stage}-${fnName}`,
+                        }
+                      } else {
+                        return {
+                          title: stage.title || stage.stage,
+                          logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
+                          lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
+                          awsProfile: stage.awsProfile,
+                          region: stage.region,
+                        }
+                      }
+                    }),
+                  },
+                ],
               },
-              icon: 'lambda'
+              icon: 'lambda',
             }
-          })
+          }),
         })
         child.kill()
       } else if (outputJson) {
@@ -197,7 +235,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
     child.stdout.setEncoding('utf8')
 
     let chunkTimeout
-    child.stdout.on('data', chunk => {
+    child.stdout.on('data', (chunk) => {
       stdout += chunk
       try {
         outputJson = YAML.parse(stdout)
@@ -218,7 +256,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
 
     let stderr = ''
 
-    child.on('error', err => {
+    child.on('error', (err) => {
       if (!stderr) {
         stderr = err.message
 
@@ -232,7 +270,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
     })
 
     child.stderr.setEncoding('utf8')
-    child.stderr.on('data', chunk => {
+    child.stderr.on('data', (chunk) => {
       stderr += chunk
     })
 
@@ -241,7 +279,7 @@ export function serverlessFrameworkService(service: Service): Promise<Service> {
         resolve({
           ...service,
           error: stderr || stdout,
-          items: []
+          items: [],
         })
       }
     })

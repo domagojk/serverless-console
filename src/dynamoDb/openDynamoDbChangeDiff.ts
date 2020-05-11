@@ -1,9 +1,8 @@
 import * as vscode from 'vscode'
-import { TreeDataProvider } from '../treeDataProvider'
-import { Store, DynamoDbFileChange } from '../types'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { readFileSync } from 'fs-extra'
+import { DynamoDbFileChange } from '../store'
 
 export async function openDynamoDbChangeDiff(change: DynamoDbFileChange) {
   if (!change) {
@@ -25,11 +24,6 @@ export async function openDynamoDbChangeDiff(change: DynamoDbFileChange) {
 }
 
 export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
-  constructor(
-    private treeDataProvider: TreeDataProvider,
-    private store: Store
-  ) {}
-
   async provideTextDocumentContent(uri: vscode.Uri): Promise<string | null> {
     if (uri.path === 'emptyString') {
       return ''
@@ -42,19 +36,13 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
       hashKey,
       fileName,
     ] = uri.path.split('/')
-    const service = this.treeDataProvider.getService(serviceHash)
 
     if (fileName.startsWith('create-')) {
       return ''
     }
 
-    if (!service) {
-      await vscode.window.showErrorMessage('DynamoDb service not found')
-      return null
-    }
-
     try {
-      const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
+      const tmpDir = join(tmpdir(), `vscode-sls-console/`, serviceHash)
       const changesDir = fileName.startsWith('update-') ? 'original' : 'changes'
 
       return readFileSync(

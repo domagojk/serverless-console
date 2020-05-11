@@ -1,7 +1,7 @@
-import { ServiceState } from '../../types'
 import { join } from 'path'
 import { outputFile, existsSync } from 'fs-extra'
 import { getFormattedJSON } from '../getFormattedJSON'
+import { ServiceState } from '../../store'
 
 export async function deleteItem(serviceState: ServiceState, message: any) {
   const { sortKey, hashKey, index, queryType } = message.payload

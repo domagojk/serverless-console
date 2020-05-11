@@ -1,5 +1,19 @@
-import { Comparison } from '../types'
 import { DynamoDB } from 'aws-sdk'
+
+export type Comparison =
+  | '='
+  | '<'
+  | '<='
+  | '>'
+  | '>='
+  | '≠'
+  | '<>'
+  | 'Between'
+  | 'Begins with'
+  | 'Exists'
+  | 'Not exists'
+  | 'Contains'
+  | 'Not contains'
 
 export function getFilterExpression(
   filters: {

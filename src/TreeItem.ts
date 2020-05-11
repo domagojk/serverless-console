@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import { Service, ServiceItem } from './types'
 import * as path from 'path'
 
 export class TreeItem extends vscode.TreeItem {
@@ -9,52 +8,55 @@ export class TreeItem extends vscode.TreeItem {
     dark: string
     light: string
   }
+  public serviceHash: string
 
   constructor(
     public readonly settings: {
-      extensionPath: string
-      isService: boolean
+      context: vscode.ExtensionContext
+      id: string
       label: string
       contextValue?: string
-      icon?: string
-      serviceHash?: string
-      serviceItem?: ServiceItem
       description?: string
+      icon?: string
       command?: {
         command: string
         title: string
+        arguments?: any[]
       }
       localSrc?: vscode.Uri
-      dir?: string // dynamodb change file directory path
+      serviceHash?: string
     },
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly command?: vscode.Command
   ) {
     super(settings.label, collapsibleState)
 
-    if (settings.icon) {
-      this.iconPathObj = getImgPath(settings.extensionPath, settings.icon)
-    }
+    this.id = settings.id
 
     if (settings.command) {
       this.command = {
         ...settings.command,
-        arguments: [this],
+        arguments: [this, ...(settings.command.arguments || [])],
       }
-    }
-
-    if (settings.contextValue) {
-      this.contextValue = settings.contextValue
-    } else if (settings.localSrc) {
-      this.contextValue = 'function-localRef'
-    } else if (settings.isService) {
-      this.contextValue = 'service'
     }
 
     if (settings.localSrc) {
       this.uri = settings.localSrc
+      this.contextValue = 'local-file'
     }
 
+    if (settings.contextValue) {
+      this.contextValue = settings.contextValue
+    }
+
+    if (settings.icon) {
+      this.iconPathObj = getImgPath(
+        settings.context.extensionPath,
+        settings.icon
+      )
+    }
+
+    this.serviceHash = settings.serviceHash
     this.iconPath = this.iconPathObj
   }
 

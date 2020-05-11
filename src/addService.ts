@@ -4,10 +4,15 @@ import { loadSharedConfigFiles } from '@aws-sdk/shared-ini-file-loader'
 import { getFontSize, getServiceHash, prepareService } from './settings'
 import { getWebviewHtml } from './logs/functionLogsWebview'
 import { getAwsCredentials } from './getAwsCredentials'
-import { serverlessFrameworkService } from './logs/serverlessFrameworkService'
-import { cloudformationService } from './logs/cloudformationService'
+import {
+  serverlessFrameworkService,
+  ServerlessFrameworkOutput,
+} from './logs/serverlessFrameworkService'
+import {
+  cloudformationService,
+  CloudformationOutput,
+} from './logs/cloudformationService'
 import { CloudFormation, CloudWatchLogs } from 'aws-sdk'
-import { Store } from './types'
 import {
   startTrialWithNotifications,
   buyLicense,
@@ -17,10 +22,7 @@ import { listDynamoDbTables } from './dynamoDb/webviewCommands/listDynamoDbTable
 
 let panel: vscode.WebviewPanel = null
 
-export const addService = (
-  context: vscode.ExtensionContext,
-  store: Store
-) => async () => {
+export const addService = (context: vscode.ExtensionContext) => async () => {
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const cwd = context.extensionPath
@@ -119,7 +121,8 @@ export const addService = (
             }
           : null
 
-      const handler =
+      type LogsService = ServerlessFrameworkOutput | CloudformationOutput
+      const handler: (service: LogsService) => Promise<LogsService> =
         newServiceData.type === 'serverlessFramework'
           ? serverlessFrameworkService
           : newServiceData.type === 'cloudformation'

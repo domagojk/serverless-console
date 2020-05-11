@@ -1,5 +1,4 @@
-import { Service, DynamoDbFileChange, Store } from '../types'
-import { TreeItemCollapsibleState } from 'vscode'
+import * as vscode from 'vscode'
 import { statSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -8,11 +7,54 @@ import { createHash } from 'crypto'
 import { getLocalItem } from './getLocalItem'
 import { readDirRecursive } from './readDirRecursive'
 import { removeSync, pathExistsSync } from 'fs-extra'
+import { Store, DynamoDbFileChange } from '../store'
+
+interface DynamoServiceInput {
+  hash: string
+  type: 'dynamodb'
+  tableName: string
+  awsProfile: string
+  region: string
+  title?: string
+}
+
+export interface DynamoServiceOutput extends DynamoServiceInput {
+  icon?: string
+  error?: string
+  items?: {
+    // Items (link for opening webview)
+    // Changes (folder with changes)
+    id?: string
+    title?: string
+    description?: string
+    command?: {
+      command: string
+      title: string
+      arguments?: any[]
+    }
+    icon?: string
+    collapsibleState?: vscode.TreeItemCollapsibleState
+    contextValue?: string
+    items?: {
+      // dynamodb changes
+      id?: string
+      title?: string
+      icon?: string
+      description?: string
+      command?: {
+        command: string
+        title: string
+        arguments?: any[]
+      }
+      contextValue?: string
+    }[]
+  }[]
+}
 
 export async function dynamoDbService(
-  service: Service,
+  service: DynamoServiceInput,
   store: Store
-): Promise<Service> {
+): Promise<DynamoServiceOutput> {
   try {
     const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
     const tmpChangesDir = join(tmpDir, 'changes')
@@ -139,21 +181,29 @@ export async function dynamoDbService(
           command: {
             command: 'serverlessConsole.openDynamoDb',
             title: 'Open DynamoDB Table',
+            arguments: [
+              {
+                title: service.title,
+                serviceHash: service.hash,
+              },
+            ],
           },
         },
         {
+          id: `${service.hash}-dynamodb-changes`,
           title: folderListForAll.length
             ? `Changes (${folderListForAll.length})`
             : 'Changes',
           icon: 'circle-outline',
           collapsibleState:
             numOfPrevChanges === folderListForAll.length
-              ? TreeItemCollapsibleState.Collapsed
-              : TreeItemCollapsibleState.Expanded,
+              ? vscode.TreeItemCollapsibleState.Collapsed
+              : vscode.TreeItemCollapsibleState.Expanded,
           contextValue: 'dynamodb-changes',
-          items: folderListForAll.map((file) => {
+          items: folderListForAll.map((file, index) => {
             return {
               title: file.name,
+              uri: vscode.Uri.file(file.absFilePath),
               icon: file.name.startsWith('update-')
                 ? 'edit-item'
                 : file.name.startsWith('delete-')
@@ -161,10 +211,14 @@ export async function dynamoDbService(
                 : file.name.startsWith('create-')
                 ? 'create-item'
                 : null,
-              dir: file.dir,
               command: {
                 command: 'serverlessConsole.openDynamoDbItemDiff',
                 title: 'Open DynamoDB Item Diff',
+                arguments: [
+                  {
+                    change: folderListForAll[index],
+                  },
+                ],
               },
               contextValue: 'dynamodb-change',
             }

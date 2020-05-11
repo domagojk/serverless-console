@@ -1,7 +1,7 @@
 import { join } from 'path'
 import { Uri, workspace, window, ViewColumn, Position } from 'vscode'
-import { ServiceState } from '../../types'
 import { getFormattedJSON } from '../getFormattedJSON'
+import { ServiceState } from '../../store'
 
 export async function createItem(
   serviceState: ServiceState,
