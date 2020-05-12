@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 import * as moment from 'moment'
 import { machineId } from 'node-machine-id'
 import axios from 'axios'
+import { getServices } from './settings'
 
 type License = {
   invalid: boolean
@@ -35,19 +36,14 @@ export async function getLicense(
     return cachedLicense
   }
 
-  if (!key) {
-    return {
-      invalid: true,
-      inTrial: false,
-      expires: null,
-    }
-  }
-
   const deviceId = await getDeviceId()
+  const serviceTypes = getServices()
+    ?.map((s) => s.type)
+    .join('-')
 
   return axios
     .get(
-      `https://api.serverlessconsole.com/checkLicense?deviceId=${deviceId}&licenseKey=${key}`,
+      `https://api.serverlessconsole.com/checkLicense?deviceId=${deviceId}&licenseKey=${key}&services=${serviceTypes}`,
       {
         timeout: 2000,
       }
@@ -285,12 +281,12 @@ function getDeviceId(): Promise<string | null> {
         }
       })
 
-    // if deviceId is not resolved in 500ms, return null
+    // if deviceId is not resolved in 1s, return null
     setTimeout(() => {
       if (isResolved === false) {
         isResolved = true
         resolve()
       }
-    }, 500)
+    }, 1000)
   })
 }

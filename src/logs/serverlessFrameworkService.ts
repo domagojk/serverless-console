@@ -22,6 +22,7 @@ export interface ServerlessFrameworkOutput extends ServerlessFrameworkInput {
   error?: string
   items?: {
     title?: string
+    type?: string
     description?: string
     command?: {
       command: string
@@ -44,6 +45,7 @@ type ServerlessYML = {
     name: string
     runtime: string
   }
+  resources?: any
   functions: Record<
     string,
     {
@@ -150,80 +152,103 @@ export function serverlessFrameworkService(
           })
         }
 
+        const dynamodbResources = Object.keys(yml.resources?.Resources || {})
+          .reduce((acc, curr) => {
+            return [...acc, yml.resources.Resources[curr]]
+          }, [])
+          .filter((resource) => {
+            return (
+              resource.Type === 'AWS::DynamoDB::Table' &&
+              resource?.Properties?.TableName
+            )
+          })
+          .map((resource) => {
+            return {
+              type: 'dynamodb',
+              title: resource.Properties.TableName,
+              tableName: resource.Properties.TableName,
+              awsProfile: service.awsProfile,
+              region: service.region || yml.provider.region,
+            }
+          })
+
         resolve({
           ...service,
           title: service.title || yml.service.name,
           region: service.region || yml.provider.region,
           icon: 'serverless-logs.png',
-          items: Object.keys(yml.functions).map((fnName) => {
-            const handler = yml.functions[fnName].handler
-            const handlerArr = handler.split('/')
-            const handlerRelativeDir = handlerArr
-              .slice(0, handlerArr.length - 1)
-              .join('/')
+          items: [
+            ...Object.keys(yml.functions).map((fnName) => {
+              const handler = yml.functions[fnName].handler
+              const handlerArr = handler.split('/')
+              const handlerRelativeDir = handlerArr
+                .slice(0, handlerArr.length - 1)
+                .join('/')
 
-            const handlerAbsDir = path.join(service.cwd, handlerRelativeDir)
+              const handlerAbsDir = path.join(service.cwd, handlerRelativeDir)
 
-            let foundFile
-            try {
-              const filesInDir = readdirSync(handlerAbsDir)
-              foundFile = filesInDir.find((fileName) => {
-                const nameArr = fileName.split('.')
-                const handlerFileName = handlerArr[handlerArr.length - 1].split(
-                  '.'
-                )[0]
-                return nameArr.length === 2 && nameArr[0] === handlerFileName
-              })
-            } catch (err) {}
+              let foundFile
+              try {
+                const filesInDir = readdirSync(handlerAbsDir)
+                foundFile = filesInDir.find((fileName) => {
+                  const nameArr = fileName.split('.')
+                  const handlerFileName = handlerArr[
+                    handlerArr.length - 1
+                  ].split('.')[0]
+                  return nameArr.length === 2 && nameArr[0] === handlerFileName
+                })
+              } catch (err) {}
 
-            const httpEvent =
-              yml.functions[fnName].events &&
-              yml.functions[fnName].events.length
-                ? yml.functions[fnName].events.find((event) => event.http)
-                : null
+              const httpEvent =
+                yml.functions[fnName].events &&
+                yml.functions[fnName].events.length
+                  ? yml.functions[fnName].events.find((event) => event.http)
+                  : null
 
-            return {
-              error: null,
-              title: fnName,
-              uri: foundFile
-                ? vscode.Uri.file(path.join(handlerAbsDir, foundFile))
-                : null,
-              description: httpEvent
-                ? `${httpEvent.http.method.toUpperCase()} /${
-                    httpEvent.http.path
-                  }`
-                : null,
-              command: {
-                command: 'serverlessConsole.openLogs',
-                title: 'Open Logs',
-                arguments: [
-                  {
-                    region: service.region || yml.provider.region,
-                    awsProfile: service.awsProfile,
-                    timeOffsetInMs: service.timeOffsetInMs,
-                    tabs: service.stages.map((stage) => {
-                      if (typeof stage === 'string') {
-                        return {
-                          title: stage,
-                          logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
-                          lambda: `${yml.service.name}-${stage}-${fnName}`,
+              return {
+                error: null,
+                title: fnName,
+                uri: foundFile
+                  ? vscode.Uri.file(path.join(handlerAbsDir, foundFile))
+                  : null,
+                description: httpEvent
+                  ? `${httpEvent.http.method.toUpperCase()} /${
+                      httpEvent.http.path
+                    }`
+                  : null,
+                command: {
+                  command: 'serverlessConsole.openLogs',
+                  title: 'Open Logs',
+                  arguments: [
+                    {
+                      region: service.region || yml.provider.region,
+                      awsProfile: service.awsProfile,
+                      timeOffsetInMs: service.timeOffsetInMs,
+                      tabs: service.stages.map((stage) => {
+                        if (typeof stage === 'string') {
+                          return {
+                            title: stage,
+                            logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
+                            lambda: `${yml.service.name}-${stage}-${fnName}`,
+                          }
+                        } else {
+                          return {
+                            title: stage.title || stage.stage,
+                            logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
+                            lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
+                            awsProfile: stage.awsProfile,
+                            region: stage.region,
+                          }
                         }
-                      } else {
-                        return {
-                          title: stage.title || stage.stage,
-                          logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
-                          lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
-                          awsProfile: stage.awsProfile,
-                          region: stage.region,
-                        }
-                      }
-                    }),
-                  },
-                ],
-              },
-              icon: 'lambda',
-            }
-          }),
+                      }),
+                    },
+                  ],
+                },
+                icon: 'lambda',
+              }
+            }),
+            ...dynamodbResources,
+          ],
         })
         child.kill()
       } else if (outputJson) {

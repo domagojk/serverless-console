@@ -57,20 +57,41 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
     })
 
     return treeItems.map((treeItem) => {
-      return new TreeItem(
-        {
-          context: this.context,
-          label: treeItem.title,
-          id: treeItem.id,
-          icon: treeItem.icon,
-          description: treeItem.description,
-          command: treeItem.command,
-          localSrc: treeItem.uri,
-          contextValue: treeItem.contextValue,
-          serviceHash: treeItem.serviceHash,
-        },
-        treeItem.collapsibleState
-      )
+      if (treeItem.error) {
+        return new TreeItem(
+          {
+            context: this.context,
+            label: treeItem.title,
+            id: treeItem.id,
+            description: treeItem.description,
+            localSrc: treeItem.uri,
+            contextValue: treeItem.contextValue,
+            serviceHash: treeItem.serviceHash,
+            icon: 'error',
+            command: {
+              command: 'slsConsoleTree.showError',
+              title: 'show error',
+              arguments: [treeItem.error],
+            },
+          },
+          vscode.TreeItemCollapsibleState.None
+        )
+      } else {
+        return new TreeItem(
+          {
+            context: this.context,
+            label: treeItem.title,
+            id: treeItem.id,
+            icon: treeItem.icon,
+            description: treeItem.description,
+            command: treeItem.command,
+            localSrc: treeItem.uri,
+            contextValue: treeItem.contextValue,
+            serviceHash: treeItem.serviceHash,
+          },
+          treeItem.collapsibleState
+        )
+      }
     })
   }
 }

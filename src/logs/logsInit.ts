@@ -4,7 +4,7 @@ import { openLogs } from './openLogs'
 export function logsInit(context: vscode.ExtensionContext) {
   let webviewErroPanel: vscode.WebviewPanel = null
 
-  vscode.commands.registerCommand('slsConsoleTree.showError', async (error) => {
+  vscode.commands.registerCommand('slsConsoleTree.showError', async (treeItem, error) => {
     if (!webviewErroPanel) {
       webviewErroPanel = vscode.window.createWebviewPanel(
         'slsConsole-error',

@@ -60,6 +60,7 @@ export type SlsConsoleFile = {
   uri?: vscode.Uri
   icon?: string
   contextValue?: string
+  error?: string
 
   // service data
   serviceHash?: string

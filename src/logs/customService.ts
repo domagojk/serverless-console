@@ -17,6 +17,7 @@ interface CustomLogsInput {
 
 export interface CustomLogsOutput extends CustomLogsInput {
   icon?: string
+  error?: string
 }
 
 export function customService(

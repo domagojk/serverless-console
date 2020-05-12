@@ -36,6 +36,7 @@ export async function cloudformationService(
   service: CloudformationInput
 ): Promise<CloudformationOutput> {
   let functionsAllStages = {}
+  let dynamodbAllStages = []
 
   try {
     for (const stack of service.stacks) {
@@ -92,6 +93,23 @@ export async function cloudformationService(
             awsProfile: profile,
           }
         })
+
+      const dynamodbResources = resources
+        .filter(
+          (r) =>
+            r.ResourceType === 'AWS::DynamoDB::Table' && r.PhysicalResourceId
+        )
+        .map((resource) => {
+          return {
+            type: 'dynamodb',
+            title: resource.PhysicalResourceId,
+            tableName: resource.PhysicalResourceId,
+            awsProfile: profile,
+            region,
+          }
+        })
+
+      dynamodbAllStages = [...dynamodbAllStages, ...dynamodbResources]
 
       functionsAllStages = functions.reduce((acc, curr) => {
         return {
@@ -197,39 +215,42 @@ export async function cloudformationService(
     return {
       ...service,
       icon: 'serverless-logs.png',
-      items: functionsArr
-        .filter((fn) => fn.log)
-        .map((fn) => {
-          return {
-            title:
-              fn.title !== 'LambdaFunction' &&
-              fn.title.endsWith('LambdaFunction')
-                ? fn.title.replace(/LambdaFunction$/, '')
-                : fn.title,
-            description: fn.method,
-            command: {
-              command: 'serverlessConsole.openLogs',
-              title: 'Open Logs',
-              arguments: [
-                {
-                  region: service.region,
-                  awsProfile: service.awsProfile,
-                  timeOffsetInMs: service.timeOffsetInMs,
-                  tabs: Object.keys(fn.stages).map((stage) => {
-                    return {
-                      title: stage,
-                      logs: fn.stages[stage].logs,
-                      lambda: fn.stages[stage].lambda,
-                      region: fn.stages[stage].region,
-                      awsProfile: fn.stages[stage].awsProfile,
-                    }
-                  }),
-                },
-              ],
-            },
-            icon: 'lambda',
-          }
-        }),
+      items: [
+        ...functionsArr
+          .filter((fn) => fn.log)
+          .map((fn) => {
+            return {
+              title:
+                fn.title !== 'LambdaFunction' &&
+                fn.title.endsWith('LambdaFunction')
+                  ? fn.title.replace(/LambdaFunction$/, '')
+                  : fn.title,
+              description: fn.method,
+              command: {
+                command: 'serverlessConsole.openLogs',
+                title: 'Open Logs',
+                arguments: [
+                  {
+                    region: service.region,
+                    awsProfile: service.awsProfile,
+                    timeOffsetInMs: service.timeOffsetInMs,
+                    tabs: Object.keys(fn.stages).map((stage) => {
+                      return {
+                        title: stage,
+                        logs: fn.stages[stage].logs,
+                        lambda: fn.stages[stage].lambda,
+                        region: fn.stages[stage].region,
+                        awsProfile: fn.stages[stage].awsProfile,
+                      }
+                    }),
+                  },
+                ],
+              },
+              icon: 'lambda',
+            }
+          }),
+        ...dynamodbAllStages,
+      ],
     }
   } catch (err) {
     return {

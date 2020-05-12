@@ -6,6 +6,7 @@ import { getServices } from './settings'
 import * as vscode from 'vscode'
 import { Store, SlsConsoleFile } from './store'
 import { Service } from './extension'
+import { createHash } from 'crypto'
 
 const handlers = {
   serverlessFramework: serverlessFrameworkService,
@@ -21,13 +22,19 @@ function renderItem(store: Store, slsConsoleFile: SlsConsoleFile) {
   ) => Promise<Service>
 
   const serviceItemHandler = (child, serviceHash) => {
+    const id = createHash('md5')
+      .update(`${slsConsoleFile.id}/${child.id || child.title}`)
+      .digest('hex')
+
     return renderItem(store, {
-      id: `${slsConsoleFile.id}/${child.id || child.title}`,
+      id,
       description: child.description,
       command: child.command,
       collapsibleState:
         child.collapsibleState !== undefined
           ? child.collapsibleState
+          : child.type
+          ? vscode.TreeItemCollapsibleState.Collapsed
           : child.items?.length
           ? vscode.TreeItemCollapsibleState.Expanded
           : vscode.TreeItemCollapsibleState.None,
@@ -38,6 +45,13 @@ function renderItem(store: Store, slsConsoleFile: SlsConsoleFile) {
       uri: child.uri,
       contextValue: child.contextValue,
       serviceHash,
+      serviceType: child.type,
+      serviceData: child.type
+        ? {
+            hash: id,
+            ...child,
+          }
+        : null,
     })
   }
 
@@ -54,18 +68,24 @@ function renderItem(store: Store, slsConsoleFile: SlsConsoleFile) {
     store.saveSlsConsoleFile({
       ...slsConsoleFile,
       icon: 'loading',
-      title: 'loading...',
+      title: slsConsoleFile.title || 'loading...',
     })
     handler(slsConsoleFile.serviceData, store).then((res) => {
       store.saveSlsConsoleFile({
         ...slsConsoleFile,
         icon: res.icon,
-        title: res.title,
+        title:
+          res.error && slsConsoleFile.serviceData.command
+            ? `error running "${slsConsoleFile.serviceData.command}"`
+            : res.title !== undefined
+            ? res.title
+            : slsConsoleFile.title,
         serviceHash: res.hash,
+        error: res.error,
       })
 
       // each item is rendered (recursive function)
-      res.items.forEach((child) => serviceItemHandler(child, res.hash))
+      res.items?.forEach((child) => serviceItemHandler(child, res.hash))
     })
   } else {
     // is a serviceItem
@@ -109,25 +129,6 @@ export function refreshServices(store: Store) {
 }
 
 export function refreshService(store: Store, hash: string) {
-  const services = getServices()
-  const service = services.find((s) => s.hash === hash)
-
-  if (service) {
-    const currentFile = store
-      .getSlsConsoleFiles()
-      .find((f) => f.id === service.hash)
-
-    renderItem(store, {
-      id: service.hash,
-      serviceHash: service.hash,
-      collapsibleState:
-        currentFile?.collapsibleState ||
-        vscode.TreeItemCollapsibleState.Expanded,
-      title: service.title,
-      parent: null,
-      icon: service.icon,
-      serviceType: service.type,
-      serviceData: service,
-    })
-  }
+  const currentFile = store.getSlsConsoleFiles().find((f) => f.id === hash)
+  renderItem(store, currentFile)
 }
