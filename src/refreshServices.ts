@@ -68,7 +68,11 @@ function renderItem(store: Store, slsConsoleFile: SlsConsoleFile) {
     store.saveSlsConsoleFile({
       ...slsConsoleFile,
       icon: 'loading',
-      title: slsConsoleFile.title || 'loading...',
+      title: slsConsoleFile.serviceData?.command
+        ? `executing "${slsConsoleFile.serviceData?.command}"...`
+        : slsConsoleFile.title
+        ? slsConsoleFile.title
+        : 'loading...',
     })
     handler(slsConsoleFile.serviceData, store).then((res) => {
       store.saveSlsConsoleFile({

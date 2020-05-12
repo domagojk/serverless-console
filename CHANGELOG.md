@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.11]
+- Detect DynamoDB resource for Serverless framework and Cloudformation sources
+
 ## [0.6.10]
 - DynamoDB: added option "Close DynamoDB Item after Save" 
 
