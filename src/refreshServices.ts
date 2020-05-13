@@ -128,6 +128,7 @@ export function refreshServices(store: Store) {
       icon: service.icon,
       serviceType: service.type,
       serviceData: service,
+      contextValue: 'service'
     })
   }
 }

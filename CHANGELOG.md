@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.12]
+- Fix bug with "Remove" option on service context menu
+
 ## [0.6.11]
 - Detect DynamoDB resource for Serverless framework and Cloudformation sources
 
