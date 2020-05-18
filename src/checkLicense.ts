@@ -18,6 +18,18 @@ const ms30min = 1800000
 let cachedLicense = null as License
 let cacheTimeout = ms24h
 
+export function getCachedLicense(context: vscode.ExtensionContext) {
+  const key = context.globalState.get('licenseKey')
+
+  if (
+    cachedLicense?.licenseKey === key &&
+    cachedLicense?.checked &&
+    Date.now() - cachedLicense?.checked < cacheTimeout
+  ) {
+    return cachedLicense
+  }
+}
+
 export async function getLicense(
   context: vscode.ExtensionContext,
   params?: {

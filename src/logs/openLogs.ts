@@ -11,7 +11,7 @@ import {
 import { getAwsCredentials } from '../getAwsCredentials'
 import { CloudWatchLogs, Lambda } from 'aws-sdk'
 import { TreeItem } from '../TreeItem'
-import { getLicense } from '../checkLicense'
+import { getLicense, getCachedLicense } from '../checkLicense'
 
 type LogsCommandData = {
   region: string
@@ -30,7 +30,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
   treeItem: TreeItem,
   commandData: LogsCommandData
 ) => {
-  const license = await getLicense(context)
+  const license = getCachedLicense(context) || getLicense(context)
+
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const extesionPath = context.extensionPath
