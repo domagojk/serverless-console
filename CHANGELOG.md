@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.15]
+- Add service message fixed if nothing is added
+
 ## [0.6.14]
 - DynamoDB service can now be used without a license
 

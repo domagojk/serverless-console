@@ -56,6 +56,24 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       }
     })
 
+    if (treeItems.length === 0) {
+      return [
+        new TreeItem(
+          {
+            label: 'Click to add a service...',
+            context: this.context,
+            id: 'no-service',
+          },
+          vscode.TreeItemCollapsibleState.None,
+          {
+            command: 'serverlessConsole.addService',
+            title: 'Add a service',
+            arguments: [],
+          }
+        ),
+      ]
+    }
+
     return treeItems.map((treeItem) => {
       if (treeItem.error) {
         return new TreeItem(
