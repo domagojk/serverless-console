@@ -7,6 +7,7 @@ import * as vscode from 'vscode'
 import { Store, SlsConsoleFile } from './store'
 import { Service } from './extension'
 import { createHash } from 'crypto'
+import { join } from 'path'
 
 const handlers = {
   serverlessFramework: serverlessFrameworkService,
@@ -23,7 +24,7 @@ function renderItem(store: Store, slsConsoleFile: SlsConsoleFile) {
 
   const serviceItemHandler = (child, serviceHash) => {
     const id = createHash('md5')
-      .update(`${slsConsoleFile.id}/${child.id || child.title}`)
+      .update(join(slsConsoleFile.id, child.id || child.title))
       .digest('hex')
 
     return renderItem(store, {
@@ -128,7 +129,7 @@ export function refreshServices(store: Store) {
       icon: service.icon,
       serviceType: service.type,
       serviceData: service,
-      contextValue: 'service'
+      contextValue: 'service',
     })
   }
 }

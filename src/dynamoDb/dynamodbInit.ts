@@ -9,7 +9,7 @@ import { executeChanges } from './webviewCommands/executeChanges/executeChanges'
 import { remove } from 'fs-extra'
 import { getLicense } from '../checkLicense'
 import { getServices } from '../settings'
-import { join } from 'path'
+import { join, sep } from 'path'
 import { cleanEmptyDirs } from '../cleanEmptyDirs'
 import { refreshService } from '../refreshServices'
 import { Store, DynamoDbFileChange } from '../store'
@@ -88,20 +88,26 @@ export async function dynamodbInit(
   )
 
   vscode.workspace.onDidSaveTextDocument((e) => {
-    if (e.uri.fsPath.startsWith(serviceTmpDir)) {
-      const relativePart = e.uri.fsPath.substr(serviceTmpDir.length)
-      const [serviceHash] = relativePart.split('/')
+    const caseInsFsPath = e.uri.fsPath.toLowerCase()
+    const caseInsServiceTmpDir = serviceTmpDir.toLowerCase()
 
-      const openedFromWebview = store.getState(serviceHash)?.openedFromWebview
+    if (caseInsFsPath.startsWith(caseInsServiceTmpDir)) {
+      const relativePart = caseInsFsPath.substr(caseInsServiceTmpDir.length)
+      const [serviceHash] = relativePart.split(sep)
+
+      const openedFromWebview = store
+        .getState(serviceHash)
+        ?.openedFromWebview?.map((val) => val.toLowerCase())
+
       const closeAfterSaveOption = vscode.workspace
         .getConfiguration()
         .get('serverlessConsole.closeDynamoDbItemAfterSave')
 
-      if (closeAfterSaveOption && openedFromWebview?.includes(e.uri.fsPath)) {
+      if (closeAfterSaveOption && openedFromWebview?.includes(caseInsFsPath)) {
         vscode.commands.executeCommand('workbench.action.closeActiveEditor')
         store.setState(serviceHash, {
           openedFromWebview: openedFromWebview.filter(
-            (file) => file !== e.uri.fsPath
+            (file) => file !== caseInsFsPath
           ),
         })
       }

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { join } from 'path'
+import { join, sep } from 'path'
 import { tmpdir } from 'os'
 import { readFileSync } from 'fs-extra'
 import { DynamoDbFileChange } from '../store'
@@ -35,14 +35,14 @@ export class DynamoDiffProvider implements vscode.TextDocumentContentProvider {
       queryTypeIndex,
       hashKey,
       fileName,
-    ] = uri.path.split('/')
+    ] = uri.path.split(sep)
 
     if (fileName.startsWith('create-')) {
       return ''
     }
 
     try {
-      const tmpDir = join(tmpdir(), `vscode-sls-console/`, serviceHash)
+      const tmpDir = join(tmpdir(), `vscode-sls-console`, sep, serviceHash)
       const changesDir = fileName.startsWith('update-') ? 'original' : 'changes'
 
       return readFileSync(

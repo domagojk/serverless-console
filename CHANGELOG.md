@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.17]
+- Fixed issue #17
+
 ## [0.6.15]
 - Add service message fixed if nothing is added
 

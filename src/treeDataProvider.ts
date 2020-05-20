@@ -1,6 +1,7 @@
 import * as vscode from 'vscode'
 import { TreeItem } from './TreeItem'
 import { Store } from './store'
+import { getServices } from './settings'
 
 export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | null> = new vscode.EventEmitter<TreeItem | null>()
@@ -56,7 +57,7 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       }
     })
 
-    if (treeItems.length === 0) {
+    if (getServices().length === 0) {
       return [
         new TreeItem(
           {

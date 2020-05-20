@@ -180,10 +180,10 @@ export function serverlessFrameworkService(
           items: [
             ...Object.keys(yml.functions).map((fnName) => {
               const handler = yml.functions[fnName].handler
-              const handlerArr = handler.split('/')
+              const handlerArr = handler.split(path.sep)
               const handlerRelativeDir = handlerArr
                 .slice(0, handlerArr.length - 1)
-                .join('/')
+                .join(path.sep)
 
               const handlerAbsDir = path.join(service.cwd, handlerRelativeDir)
 

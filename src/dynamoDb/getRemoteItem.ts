@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join, sep } from 'path'
 import { DynamoDB } from 'aws-sdk'
 import { uniq } from 'lodash'
 import { getAwsCredentials } from '../getAwsCredentials'
@@ -14,7 +14,7 @@ export async function getRemoteItem({
   serviceState: ServiceState
   path: string
 }) {
-  const [queryTypeIndex, hashKey, fileName] = path.split('/').slice(-3)
+  const [queryTypeIndex, hashKey, fileName] = path.split(sep).slice(-3)
   const splitted = queryTypeIndex.split('-')
   const index = splitted.slice(1).join('-')
 

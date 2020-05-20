@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { TreeDataProvider } from './treeDataProvider'
 import { removeService } from './removeService'
 import { addService } from './addService'
-import { join } from 'path'
+import { join, sep } from 'path'
 import { tmpdir } from 'os'
 import { dynamodbInit } from './dynamoDb/dynamodbInit'
 import { logsInit } from './logs/logsInit'
@@ -37,7 +37,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // tmp directory (used for saving dynamodb changes)
-  const serviceTmpDir = join(tmpdir(), 'vscode-sls-console/')
+  const serviceTmpDir = join(tmpdir(), 'vscode-sls-console', sep)
 
   refreshServices(store)
 

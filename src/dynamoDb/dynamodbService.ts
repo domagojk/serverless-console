@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { statSync } from 'fs'
-import { join } from 'path'
+import { join, sep, normalize } from 'path'
 import { tmpdir } from 'os'
 import { getTableDetails } from './getTableDetails'
 import { createHash } from 'crypto'
@@ -56,7 +56,7 @@ export async function dynamoDbService(
   store: Store
 ): Promise<DynamoServiceOutput> {
   try {
-    const tmpDir = join(tmpdir(), `vscode-sls-console/`, service.hash)
+    const tmpDir = join(tmpdir(), `vscode-sls-console`, sep, service.hash)
     const tmpChangesDir = join(tmpDir, 'changes')
     const tmpOriginalDir = join(tmpDir, 'original')
 
@@ -73,7 +73,8 @@ export async function dynamoDbService(
     const folderListForAll: DynamoDbFileChange[] = list
       .filter((file) => file.endsWith('json'))
       .map((filePath) => {
-        const [queryTypeIndex, hashKey, file] = filePath.split('/')
+        const [queryTypeIndex, hashKey, file] = filePath.split(sep)
+
         const action = file.startsWith('update-')
           ? 'update'
           : file.startsWith('delete-')
@@ -141,7 +142,7 @@ export async function dynamoDbService(
         return {
           queryType: splitted[0],
           absFilePath: absFilePathChange,
-          relFilePath: `${service.hash}/changes/${filePath}`,
+          relFilePath: join(service.hash, 'changes', filePath),
           absFilePathOriginal,
           index,
           json: jsonChange,
