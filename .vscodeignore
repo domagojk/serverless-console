@@ -13,3 +13,4 @@ out/
 src/
 tsconfig.json
 webpack.config.js
+gifs/
