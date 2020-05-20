@@ -3,7 +3,7 @@
 All notable changes to the "serverless-console" extension will be documented in this file.
 
 ## [0.6.18]
-- Fixed wrong bundle size from last version
+- Fixed bundle size from last version
 
 ## [0.6.17]
 - Fixed issue #17
