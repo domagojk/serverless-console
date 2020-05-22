@@ -7,6 +7,7 @@ import {
   getAutoRefreshInterval,
   setAutoRefreshInterval,
   getFontFamily,
+  getAllSettings,
 } from '../settings'
 import { getAwsCredentials } from '../getAwsCredentials'
 import { CloudWatchLogs, Lambda } from 'aws-sdk'
@@ -54,6 +55,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
     )
 
     const viewState = context.workspaceState.get(`viewstate:${treeItem.id}`)
+    const settings = getAllSettings()
 
     treeItem.panel.webview.html = await getWebviewHtml({
       panel: treeItem.panel,
@@ -76,7 +78,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           fontFamily: "${getFontFamily()}",
           license: ${JSON.stringify(license)},
           tabs: ${JSON.stringify(commandData.tabs)},
-          viewState: ${viewState ? JSON.stringify(viewState) : null}
+          viewState: ${viewState ? JSON.stringify(viewState) : null},
+          settings: ${settings ? JSON.stringify(settings) : null}
         }
       `,
     })
@@ -98,6 +101,17 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
               `viewstate:${treeItem.id}`,
               message.payload
             )
+            break
+          }
+          case 'settingsChanged': {
+            for (const settingsKey of Object.keys(message.payload)) {
+              vscode.workspace
+                .getConfiguration()
+                .update(
+                  `serverlessConsole.${settingsKey}`,
+                  message.payload[settingsKey]
+                )
+            }
             break
           }
           case 'setAutoRefresh': {

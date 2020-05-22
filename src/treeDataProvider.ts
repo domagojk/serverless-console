@@ -57,7 +57,11 @@ export class TreeDataProvider implements vscode.TreeDataProvider<TreeItem> {
       }
     })
 
-    if (getServices().length === 0) {
+    const services: any[] =
+      vscode.workspace.getConfiguration().get('serverlessConsole.services') ||
+      []
+
+    if (services.length === 0) {
       return [
         new TreeItem(
           {

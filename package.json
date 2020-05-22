@@ -144,16 +144,18 @@
               }
             }
           },
-          "description": "'serverless print' command(s) for retriving data about the service"
-        },
-        "serverlessConsole.licenseKey": {
-          "type": "string",
-          "title": "DEPRECATED"
+          "description": "List of all services (CloudWatch, DynamoDb) used in a project"
         },
         "serverlessConsole.closeDynamoDbItemAfterSave": {
           "type": "boolean",
           "title": "Close DynamoDB Item after Save",
           "description": "Should the editor be closed after DynamoDB JSON has been saved",
+          "default": false
+        },
+        "serverlessConsole.searchByLogStreams": {
+          "type": "boolean",
+          "title": "Search By Log Streams",
+          "description": "When on Log Search, default value of show results per log stream option",
           "default": false
         }
       }

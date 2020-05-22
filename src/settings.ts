@@ -39,6 +39,25 @@ export function getServiceHash(service) {
   return createHash('md5').update(JSON.stringify(service)).digest('hex')
 }
 
+export function getAllSettings() {
+  const settingKeys = [
+    'serverlessConsole.groupPerRequest',
+    'serverlessConsole.autoRefreshInterval',
+    'serverlessConsole.closeDynamoDbItemAfterSave',
+    'serverlessConsole.searchByLogStreams',
+  ]
+
+  return settingKeys.reduce((acc, curr) => {
+    return {
+      ...acc,
+      [curr.replace(
+        'serverlessConsole.',
+        ''
+      )]: vscode.workspace.getConfiguration().get(curr),
+    }
+  }, {})
+}
+
 export function getGroupPerRequest(): Boolean {
   return vscode.workspace
     .getConfiguration()
