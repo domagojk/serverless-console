@@ -53,6 +53,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       }
     )
 
+    const viewState = context.workspaceState.get(`viewstate:${treeItem.id}`)
+
     treeItem.panel.webview.html = await getWebviewHtml({
       panel: treeItem.panel,
       fontSize: getFontSize(),
@@ -73,7 +75,8 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           fontSize: "${getFontSize()}",
           fontFamily: "${getFontFamily()}",
           license: ${JSON.stringify(license)},
-          tabs: ${JSON.stringify(commandData.tabs)}
+          tabs: ${JSON.stringify(commandData.tabs)},
+          viewState: ${viewState ? JSON.stringify(viewState) : null}
         }
       `,
     })
@@ -90,6 +93,13 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
     treeItem.panel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.command) {
+          case 'viewstateChanged': {
+            context.workspaceState.update(
+              `viewstate:${treeItem.id}`,
+              message.payload
+            )
+            break
+          }
           case 'setAutoRefresh': {
             const newVal = message.payload.enabled ? autoRefreshEnabledVal : 0
             setAutoRefreshInterval(newVal)
