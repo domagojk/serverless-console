@@ -3,16 +3,16 @@ import { join } from 'path'
 import { getWebviewHtml } from './functionLogsWebview'
 import {
   getFontSize,
-  getGroupPerRequest,
   getAutoRefreshInterval,
-  setAutoRefreshInterval,
   getFontFamily,
   getAllSettings,
+  updateSettings,
 } from '../settings'
 import { getAwsCredentials } from '../getAwsCredentials'
 import { CloudWatchLogs, Lambda } from 'aws-sdk'
 import { TreeItem } from '../TreeItem'
 import { getLicense, getCachedLicense } from '../checkLicense'
+import { showLogsOptions } from './webviewCommands/showLogsOptions'
 
 type LogsCommandData = {
   region: string
@@ -47,7 +47,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       `${treeItem.label}`,
       vscode.ViewColumn.One,
       {
-        enableFindWidget: true,
+        enableFindWidget: false,
         retainContextWhenHidden: true,
         enableScripts: true,
         localResourceRoots: [localResourceRoot],
@@ -72,7 +72,6 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       inlineJs: `
         document.vscodeData = {
           page: 'logs',
-          groupPerRequest: ${getGroupPerRequest()},
           autoRefreshInterval: ${getAutoRefreshInterval()},
           fontSize: "${getFontSize()}",
           fontFamily: "${getFontFamily()}",
@@ -91,8 +90,6 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
       }
     }
 
-    const autoRefreshEnabledVal = getAutoRefreshInterval() || 5000
-
     treeItem.panel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.command) {
@@ -104,24 +101,14 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
             break
           }
           case 'settingsChanged': {
-            for (const settingsKey of Object.keys(message.payload)) {
-              vscode.workspace
-                .getConfiguration()
-                .update(
-                  `serverlessConsole.${settingsKey}`,
-                  message.payload[settingsKey]
-                )
-            }
+            updateSettings(message.payload)
             break
           }
-          case 'setAutoRefresh': {
-            const newVal = message.payload.enabled ? autoRefreshEnabledVal : 0
-            setAutoRefreshInterval(newVal)
+          case 'showLogsOptions': {
+            const payload = await showLogsOptions()
             treeItem.panel?.webview?.postMessage({
               messageId: message.messageId,
-              payload: {
-                autoRefreshInterval: newVal,
-              },
+              payload,
             })
             break
           }
@@ -208,6 +195,7 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
 
                 const log = await cloudwatchlogs
                   .getLogEvents({
+                    startFromHead: true,
                     nextToken: message.payload.nextToken,
                     logGroupName: message.payload.logGroup,
                     logStreamName: message.payload.logStream,
