@@ -39,7 +39,13 @@ export function getServiceHash(service) {
   return createHash('md5').update(JSON.stringify(service)).digest('hex')
 }
 
-export function getAllSettings() {
+type Settings = {
+  groupPerRequest: boolean
+  autoRefreshInterval: number
+  closeDynamoDbItemAfterSave: boolean
+  searchByLogStreams: boolean
+}
+export function getAllSettings(): Settings {
   const settingKeys = [
     'serverlessConsole.groupPerRequest',
     'serverlessConsole.autoRefreshInterval',
@@ -55,13 +61,15 @@ export function getAllSettings() {
         ''
       )]: vscode.workspace.getConfiguration().get(curr),
     }
-  }, {})
+  }, {} as Settings)
 }
 
-export function getGroupPerRequest(): Boolean {
-  return vscode.workspace
-    .getConfiguration()
-    .get('serverlessConsole.groupPerRequest')
+export function updateSettings(settings) {
+  for (const settingsKey of Object.keys(settings)) {
+    vscode.workspace
+      .getConfiguration()
+      .update(`serverlessConsole.${settingsKey}`, settings[settingsKey])
+  }
 }
 
 export function getAutoRefreshInterval(): number {
