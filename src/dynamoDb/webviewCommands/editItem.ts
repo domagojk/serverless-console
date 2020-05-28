@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { join } from 'path'
 import { getFormattedJSON } from '../getFormattedJSON'
 import { getLocalItem } from '../getLocalItem'
-import { writeFileSync, ensureFileSync, pathExists } from 'fs-extra'
+import { writeFileSync, ensureFileSync, readJSON } from 'fs-extra'
 import { Store } from '../../store'
 
 export async function editItem(
@@ -30,8 +30,6 @@ export async function editItem(
 
   const localDocPath = join(serviceState.tmpDir, 'changes', relativeFilePath)
 
-  const existingChange = await pathExists(localDocPath)
-
   const originalFormated = getFormattedJSON(
     message.payload.originalContent,
     message.payload.columns
@@ -39,14 +37,24 @@ export async function editItem(
   ensureFileSync(localDocPathOriginal)
   writeFileSync(localDocPathOriginal, originalFormated.stringified)
 
-  if (!existingChange) {
-    const { stringified } = getFormattedJSON(
-      message.payload.content,
-      message.payload.columns
-    )
+  const webviewItemFormatted = getFormattedJSON(
+    message.payload.content,
+    message.payload.columns
+  )
 
+  const existingChange = await readJSON(localDocPath).catch((err) => {})
+  const existingChangeFormatted = getFormattedJSON(
+    existingChange,
+    message.payload.columns
+  )
+
+  if (
+    existingChangeFormatted.stringified !== webviewItemFormatted.stringified
+  ) {
+    // item is different that saved locally
+    // overwrite with the one from webview
     ensureFileSync(localDocPath)
-    writeFileSync(localDocPath, stringified)
+    writeFileSync(localDocPath, webviewItemFormatted.stringified)
   }
 
   const uri = vscode.Uri.file(localDocPath)
