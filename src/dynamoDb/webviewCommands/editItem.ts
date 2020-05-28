@@ -74,17 +74,14 @@ export async function editItem(
       json[message.payload.selectColumn] !== undefined
 
     if (shouldSelectProperty) {
-      const selection = getEditorSelection(
-        doc,
-        space,
-        message.payload.selectColumn
-      )
-      editor.selection = selection
+      const res = getEditorSelection(doc, space, message.payload.selectColumn)
+      editor.selection = res.selection
 
       setTimeout(() => {
         // without timeout after change is made after it was previously deleted
         // selection is canceled for some reason
-        editor.selection = selection
+        editor.revealRange(res.range)
+        editor.selection = res.selection
       }, 100)
     }
   } catch (err) {
@@ -144,8 +141,14 @@ function getEditorSelection(
     chEnd = chEnd - 1
   }
 
-  return new vscode.Selection(
-    new vscode.Position(lineStart, chStart),
-    new vscode.Position(lineEnd, chEnd)
-  )
+  return {
+    selection: new vscode.Selection(
+      new vscode.Position(lineStart, chStart),
+      new vscode.Position(lineEnd, chEnd)
+    ),
+    range: new vscode.Range(
+      new vscode.Position(lineStart, chStart),
+      new vscode.Position(lineEnd, chEnd)
+    ),
+  }
 }
