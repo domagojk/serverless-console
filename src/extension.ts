@@ -6,7 +6,6 @@ import { join, sep } from 'path'
 import { tmpdir } from 'os'
 import { dynamodbInit } from './dynamoDb/dynamodbInit'
 import { logsInit } from './logs/logsInit'
-import { showProOptions } from './checkLicense'
 import { refreshServices } from './refreshServices'
 import { openFile } from './openFile'
 import { Store } from './store'
@@ -62,6 +61,10 @@ export async function activate(context: vscode.ExtensionContext) {
     refreshServices(store)
   })
 
+  vscode.commands.registerCommand('serverlessConsole.refreshEntryCommandPalette', () => {
+    refreshServices(store)
+  })
+
   vscode.commands.registerCommand(
     'serverlessConsole.removeService',
     removeService
@@ -71,10 +74,6 @@ export async function activate(context: vscode.ExtensionContext) {
     'serverlessConsole.addService',
     addService(context)
   )
-
-  vscode.commands.registerCommand('serverlessConsole.proVersion', () => {
-    showProOptions(context)
-  })
 
   vscode.commands.registerCommand('serverlessConsole.openFile', openFile)
 

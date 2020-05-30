@@ -170,6 +170,10 @@
         "title": "Execute Changes"
       },
       {
+        "command": "serverlessConsole.refreshEntryCommandPalette",
+        "title": "Serverless Console: Refresh Services"
+      },
+      {
         "command": "serverlessConsole.refreshEntry",
         "title": "Refresh",
         "icon": {
@@ -187,7 +191,7 @@
       },
       {
         "command": "serverlessConsole.addService",
-        "title": "Add Service",
+        "title": "Serverless Console: Add Service",
         "icon": {
           "light": "resources/light/add.svg",
           "dark": "resources/dark/add.svg"
@@ -198,21 +202,8 @@
         "title": "Remove"
       },
       {
-        "command": "serverlessConsole.update-dynamodb-item",
-        "title": "Update DynamoDB item"
-      },
-      {
-        "command": "serverlessConsole.delete-dynamodb-item",
-        "title": "Delete DynamoDB item"
-      },
-      {
         "command": "serverlessConsole.openDynamoDbItemDiff",
         "title": "Open DynamoDB Item Diff"
-      },
-      {
-        "command": "serverlessConsole.proVersion",
-        "title": "Serverless Console Pro",
-        "enablement": "view == slsConsoleTree"
       }
     ],
     "viewsContainers": {
@@ -233,6 +224,36 @@
       ]
     },
     "menus": {
+      "commandPalette": [
+        {
+          "command": "serverlessConsole.removeService",
+          "when": "false"
+        },
+        {
+          "command": "serverlessConsole.refreshEntry",
+          "when": "false"
+        },
+        {
+          "command": "serverlessConsole.dynamodbExecuteChanges",
+          "when": "false"
+        },
+        {
+          "command": "serverlessConsole.dynamodbDiscardChange",
+          "when": "false"
+        },
+        {
+          "command": "serverlessConsole.removeService",
+          "when": "false"
+        },
+        {
+          "command": "serverlessConsole.openDynamoDbItemDiff",
+          "when": "false"
+        },
+        {
+          "command": "serverlessConsole.openFile",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
           "command": "serverlessConsole.refreshEntry",
@@ -243,11 +264,6 @@
           "command": "serverlessConsole.addService",
           "when": "view == slsConsoleTree",
           "group": "navigation"
-        },
-        {
-          "command": "serverlessConsole.proVersion",
-          "when": "view == slsConsoleTree",
-          "group": "2_other@1"
         }
       ],
       "view/item/context": [
