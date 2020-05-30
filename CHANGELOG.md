@@ -2,6 +2,10 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.22] 30 May 2020
+- Fixed issue #20
+- Fixed issue #24
+
 ## [0.6.21] 25 May 2020
 - Styling changes (stage selection is always on top, search bar is the same for all logs)
 
