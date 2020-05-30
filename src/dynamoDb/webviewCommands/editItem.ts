@@ -43,13 +43,12 @@ export async function editItem(
   )
 
   const existingChange = await readJSON(localDocPath).catch((err) => {})
-  const existingChangeFormatted = getFormattedJSON(
-    existingChange,
-    message.payload.columns
-  )
+  const existingChangeFormatted = existingChange
+    ? getFormattedJSON(existingChange, message.payload.columns)
+    : null
 
   if (
-    existingChangeFormatted.stringified !== webviewItemFormatted.stringified
+    existingChangeFormatted?.stringified !== webviewItemFormatted.stringified
   ) {
     // item is different that saved locally
     // overwrite with the one from webview
