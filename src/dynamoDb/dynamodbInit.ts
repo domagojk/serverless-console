@@ -7,7 +7,6 @@ import {
 } from './openDynamoDbChangeDiff'
 import { executeChanges } from './webviewCommands/executeChanges/executeChanges'
 import { remove } from 'fs-extra'
-import { getLicense } from '../checkLicense'
 import { getServices } from '../settings'
 import { join, sep } from 'path'
 import { cleanEmptyDirs } from '../cleanEmptyDirs'
@@ -40,8 +39,6 @@ export async function dynamodbInit(
       .getConfiguration()
       .update('serverlessConsole.licenseKey', undefined, true)
   }
-
-  await getLicense(context)
 
   vscode.commands.registerCommand(
     'serverlessConsole.openDynamoDb',

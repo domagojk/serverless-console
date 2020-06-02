@@ -11,7 +11,6 @@ import {
 import { getAwsCredentials } from '../getAwsCredentials'
 import { CloudWatchLogs, Lambda } from 'aws-sdk'
 import { TreeItem } from '../TreeItem'
-import { getLicense, getCachedLicense } from '../checkLicense'
 import { showLogsOptions } from './webviewCommands/showLogsOptions'
 
 type LogsCommandData = {
@@ -31,8 +30,6 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
   treeItem: TreeItem,
   commandData: LogsCommandData
 ) => {
-  const license = getCachedLicense(context) || getLicense(context)
-
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const extesionPath = context.extensionPath
@@ -75,7 +72,6 @@ export const openLogs = (context: vscode.ExtensionContext) => async (
           autoRefreshInterval: ${getAutoRefreshInterval()},
           fontSize: "${getFontSize()}",
           fontFamily: "${getFontFamily()}",
-          license: ${JSON.stringify(license)},
           tabs: ${JSON.stringify(commandData.tabs)},
           viewState: ${viewState ? JSON.stringify(viewState) : null},
           settings: ${settings ? JSON.stringify(settings) : null}

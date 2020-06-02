@@ -13,11 +13,6 @@ import {
   CloudformationOutput,
 } from './logs/cloudformationService'
 import { CloudFormation, CloudWatchLogs } from 'aws-sdk'
-import {
-  startTrialWithNotifications,
-  buyLicense,
-  getLicense,
-} from './checkLicense'
 import { listDynamoDbTables } from './dynamoDb/webviewCommands/listDynamoDbTables'
 
 let panel: vscode.WebviewPanel = null
@@ -27,7 +22,6 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
   const staticCss = 'resources/webview/build/static/css'
   const cwd = context.extensionPath
   const localResourceRoot = vscode.Uri.file(join(cwd, 'resources/webview'))
-  const license = await getLicense(context)
 
   if (panel) {
     panel.reveal()
@@ -64,7 +58,6 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
     ],
     inlineJs: `
           document.vscodeData = {
-            license: ${JSON.stringify(license)},
             page: 'createService',
             profiles: ${JSON.stringify(profiles)}
           }
@@ -255,17 +248,6 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
           },
         })
       }
-    } else if (message.command === 'startTrial') {
-      const license = await startTrialWithNotifications(context)
-
-      panel.webview.postMessage({
-        messageId: message.messageId,
-        payload: {
-          license,
-        },
-      })
-    } else if (message.command === 'buyLicense') {
-      buyLicense()
     } else if (message.command === 'listDynamoDbTables') {
       try {
         const tableNames = await listDynamoDbTables(

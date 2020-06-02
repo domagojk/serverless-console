@@ -12,12 +12,6 @@ import { executeChanges } from './webviewCommands/executeChanges/executeChanges'
 import { remove } from 'fs-extra'
 import { openDynamoDbChangeDiff } from './openDynamoDbChangeDiff'
 import { dynamoDbOptions } from './webviewCommands/dynamodbOptions'
-import {
-  buyLicense,
-  showProOptions,
-  enterLicense,
-  getLicense,
-} from '../checkLicense'
 import { refreshService } from '../refreshServices'
 import { Store } from '../store'
 
@@ -30,8 +24,6 @@ export const openDynamoDb = (
   context: vscode.ExtensionContext,
   store: Store
 ) => async (treeItem: TreeItem, commandData: DynamoCommandData) => {
-  let license = await getLicense(context)
-
   const staticJs = 'resources/webview/build/static/js'
   const staticCss = 'resources/webview/build/static/css'
   const extesionPath = context.extensionPath
@@ -70,7 +62,6 @@ export const openDynamoDb = (
       inlineJs: `
         document.vscodeData = {
           page: 'dynamoDb',
-          license: ${JSON.stringify(license)},
           fontSize: "${getFontSize()}",
           fontFamily: "${getFontFamily()}"
         }
@@ -158,18 +149,6 @@ export const openDynamoDb = (
           }
           case 'dynamodbOptions': {
             dynamoDbOptions(message, treeItem)
-            break
-          }
-          case 'showLicenseDialog': {
-            showProOptions(context)
-            break
-          }
-          case 'buyLicense': {
-            buyLicense()
-            break
-          }
-          case 'enterLicense': {
-            enterLicense(context)
             break
           }
         }
