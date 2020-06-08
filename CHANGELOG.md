@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.6.24] 08 Jun 2020
+- Fixed issue #25
+
 ## [0.6.22] 30 May 2020
 - Fixed issue #20
 - Fixed issue #24
