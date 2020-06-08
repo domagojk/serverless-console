@@ -16,6 +16,12 @@ export async function executeChanges(
 ) {
   const serviceState = store.getState(serviceHash)
 
+  if (serviceState.changes.findIndex((c) => c.status === 'inProgress') !== -1) {
+    return vscode.window.showInformationMessage(
+      `Execution is already in progress`
+    )
+  }
+
   const credentials = await getAwsCredentials(serviceState.awsProfile)
   const dynamoDb = new DynamoDB.DocumentClient({
     credentials,
