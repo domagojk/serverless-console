@@ -10,7 +10,6 @@
     "url": "https://github.com/domagojk/serverless-console.git"
   },
   "bugs": "https://github.com/domagojk/serverless-console/issues",
-  "homepage": "https://serverlessconsole.com",
   "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.38.0"
