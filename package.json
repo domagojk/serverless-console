@@ -4,7 +4,7 @@
   "displayName": "Serverless Console",
   "description": "Serverless Console is an alternative UI for AWS CloudWatch and DynamoDB, focused on \"serverless development\"",
   "author": "domagojk (http://github.com/domagojk)",
-  "version": "0.6.24",
+  "version": "0.6.25",
   "repository": {
     "type": "git",
     "url": "https://github.com/domagojk/serverless-console.git"
@@ -326,7 +326,7 @@
     "cross-spawn": "^7.0.1",
     "fs-extra": "^8.1.0",
     "jsonc-parser": "^2.2.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "moment": "2.24.0",
     "node-machine-id": "^1.1.12",
     "yaml": "1.7.0"
