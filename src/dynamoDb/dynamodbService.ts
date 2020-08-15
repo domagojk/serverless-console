@@ -132,6 +132,17 @@ export async function dynamoDbService(
               : jsonChange[tableDetails.hashKey]
             : file.split('.').slice(0, -1).join('.').slice(7) // removing .json and removing update-, create-, delete-
 
+        if (
+          !tableDetails.sortKey &&
+          tableDetails.descOutput?.AttributeDefinitions.find(
+            (a) =>
+              a.AttributeName === tableDetails.hashKey &&
+              a.AttributeType === 'N'
+          )
+        ) {
+          compositKey = parseInt(compositKey)
+        }
+
         const splitted = queryTypeIndex.split('-')
         const index = splitted.slice(1).join('-')
 
