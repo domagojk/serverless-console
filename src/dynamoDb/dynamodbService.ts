@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { statSync } from 'fs'
-import { join, sep, normalize } from 'path'
+import { join, sep } from 'path'
 import { tmpdir } from 'os'
 import { getTableDetails } from './getTableDetails'
 import { createHash } from 'crypto'
@@ -16,6 +16,7 @@ interface DynamoServiceInput {
   awsProfile: string
   region: string
   title?: string
+  endpoint?: string
 }
 
 export interface DynamoServiceOutput extends DynamoServiceInput {
@@ -123,7 +124,7 @@ export async function dynamoDbService(
           }
         }
 
-        const compositKey =
+        let compositKey =
           action === 'create'
             ? tableDetails.sortKey
               ? `${jsonChange[tableDetails.hashKey]}-${
@@ -177,6 +178,7 @@ export async function dynamoDbService(
     store.setState(service.hash, {
       tableName: service.tableName,
       awsProfile: service.awsProfile,
+      endpoint: service.endpoint,
       region: service.region,
       changes: folderListForAll,
       tableDetails,

@@ -117,6 +117,7 @@ async function getItems(serviceState: ServiceState, message: Message) {
   const dynamoDb = new DynamoDB({
     credentials,
     region: serviceState.region,
+    endpoint: serviceState.endpoint,
   })
 
   const dynamoDbRes =

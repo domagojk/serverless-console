@@ -42,6 +42,7 @@ export type ServiceState = {
   region?: string
   tableName?: string
   awsProfile?: string
+  endpoint?: string
   openedFromWebview?: string[]
 }
 

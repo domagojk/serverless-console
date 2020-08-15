@@ -48,6 +48,7 @@ export async function getRemoteItem({
   const dynamoDb = new DynamoDB({
     credentials,
     region: serviceState.region,
+    endpoint: serviceState.endpoint,
   })
 
   const queryParams = {
