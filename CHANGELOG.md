@@ -2,7 +2,7 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
-## [0.6.3] 15 Aug 2020
+## [0.7.0] 15 Aug 2020
 - Added ability to connect to a local DynamoDb (issue #30)
 
 ## [0.6.25] 29 Jun 2020
