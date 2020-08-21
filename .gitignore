@@ -3,5 +3,3 @@ dist
 node_modules
 .vscode-test/
 *.vsix
-resources/webview/build/static/css/*.css
-resources/webview/build/static/js/*.js
