@@ -49,6 +49,7 @@ type ServerlessYML = {
   functions: Record<
     string,
     {
+      name?: string
       handler: string
       events: {
         http: {
@@ -205,9 +206,11 @@ export function serverlessFrameworkService(
                   ? yml.functions[fnName].events.find((event) => event.http)
                   : null
 
+              const fnNameWithCustom = yml.functions[fnName].name || fnName
+
               return {
                 error: null,
-                title: fnName,
+                title: fnNameWithCustom,
                 uri: foundFile
                   ? vscode.Uri.file(path.join(handlerAbsDir, foundFile))
                   : null,
@@ -228,14 +231,14 @@ export function serverlessFrameworkService(
                         if (typeof stage === 'string') {
                           return {
                             title: stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
-                            lambda: `${yml.service.name}-${stage}-${fnName}`,
+                            logs: `/aws/lambda/${yml.service.name}-${stage}-${fnNameWithCustom}`,
+                            lambda: `${yml.service.name}-${stage}-${fnNameWithCustom}`,
                           }
                         } else {
                           return {
                             title: stage.title || stage.stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
-                            lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
+                            logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnNameWithCustom}`,
+                            lambda: `${yml.service.name}-${stage.stage}-${fnNameWithCustom}`,
                             awsProfile: stage.awsProfile,
                             region: stage.region,
                           }
