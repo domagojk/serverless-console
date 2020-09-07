@@ -206,11 +206,9 @@ export function serverlessFrameworkService(
                   ? yml.functions[fnName].events.find((event) => event.http)
                   : null
 
-              const fnNameWithCustom = yml.functions[fnName].name || fnName
-
               return {
                 error: null,
-                title: fnNameWithCustom,
+                title: fnName,
                 uri: foundFile
                   ? vscode.Uri.file(path.join(handlerAbsDir, foundFile))
                   : null,
@@ -228,17 +226,23 @@ export function serverlessFrameworkService(
                       awsProfile: service.awsProfile,
                       timeOffsetInMs: service.timeOffsetInMs,
                       tabs: service.stages.map((stage) => {
+                        const logGroupOnlyName =
+                          yml.functions[fnName]?.name?.replace(
+                            `${yml.service.name}-${stage}-`,
+                            ''
+                          ) || fnName
+
                         if (typeof stage === 'string') {
                           return {
                             title: stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage}-${fnNameWithCustom}`,
-                            lambda: `${yml.service.name}-${stage}-${fnNameWithCustom}`,
+                            logs: `/aws/lambda/${yml.service.name}-${stage}-${logGroupOnlyName}`,
+                            lambda: `${yml.service.name}-${stage}-${logGroupOnlyName}`,
                           }
                         } else {
                           return {
                             title: stage.title || stage.stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnNameWithCustom}`,
-                            lambda: `${yml.service.name}-${stage.stage}-${fnNameWithCustom}`,
+                            logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${logGroupOnlyName}`,
+                            lambda: `${yml.service.name}-${stage.stage}-${logGroupOnlyName}`,
                             awsProfile: stage.awsProfile,
                             region: stage.region,
                           }
