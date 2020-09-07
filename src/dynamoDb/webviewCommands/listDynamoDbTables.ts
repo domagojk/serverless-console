@@ -1,11 +1,16 @@
 import { DynamoDB } from 'aws-sdk'
 import { getAwsCredentials } from '../../getAwsCredentials'
 
-export async function listDynamoDbTables(awsProfile: string, region: string) {
+export async function listDynamoDbTables(
+  awsProfile: string,
+  region: string,
+  endpoint?: string
+) {
   const credentials = await getAwsCredentials(awsProfile)
   const dynamoDb = new DynamoDB({
     credentials,
     region,
+    endpoint: region === 'local' ? endpoint : null,
   })
 
   const listTablesRecursive = async (

@@ -10,6 +10,7 @@ export async function getTableDetails(
   const dynamoDb = new DynamoDB({
     credentials,
     region: service.region,
+    endpoint: service.endpoint,
   })
 
   const res = await dynamoDb
@@ -63,6 +64,7 @@ export async function getDynamoDbServiceContext(
   const dynamoDb = new DynamoDB({
     credentials,
     region: service.region,
+    endpoint: service.endpoint,
   })
 
   const res = await dynamoDb

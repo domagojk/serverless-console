@@ -1,5 +1,6 @@
 import * as vscode from 'vscode'
 import { join } from 'path'
+import { omitBy } from 'lodash'
 import { loadSharedConfigFiles } from '@aws-sdk/shared-ini-file-loader'
 import { getFontSize, getServiceHash, prepareService } from './settings'
 import { getWebviewHtml } from './logs/functionLogsWebview'
@@ -105,13 +106,17 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
               items: message.payload.items,
             }
           : message.payload.source === 'dynamodb'
-          ? {
-              type: 'dynamodb',
-              title: message.payload.tableName,
-              tableName: message.payload.tableName,
-              awsProfile: message.payload.awsProfile,
-              region: message.payload.region,
-            }
+          ? omitBy(
+              {
+                type: 'dynamodb',
+                title: message.payload.tableName,
+                tableName: message.payload.tableName,
+                awsProfile: message.payload.awsProfile,
+                region: message.payload.region,
+                endpoint: message.payload.endpoint,
+              },
+              (val) => val === null
+            )
           : null
 
       type LogsService = ServerlessFrameworkOutput | CloudformationOutput
@@ -252,7 +257,8 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
       try {
         const tableNames = await listDynamoDbTables(
           message.payload.awsProfile,
-          message.payload.region
+          message.payload.region,
+          message.payload.endpoint
         )
         panel.webview.postMessage({
           messageId: message.messageId,

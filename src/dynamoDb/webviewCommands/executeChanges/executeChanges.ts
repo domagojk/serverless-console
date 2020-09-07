@@ -26,6 +26,7 @@ export async function executeChanges(
   const dynamoDb = new DynamoDB.DocumentClient({
     credentials,
     region: serviceState.region,
+    endpoint: serviceState.endpoint,
   })
 
   for (const change of serviceState.changes) {
