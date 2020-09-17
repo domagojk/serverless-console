@@ -49,6 +49,7 @@ type ServerlessYML = {
   functions: Record<
     string,
     {
+      name?: string
       handler: string
       events: {
         http: {
@@ -226,16 +227,18 @@ export function serverlessFrameworkService(
                       timeOffsetInMs: service.timeOffsetInMs,
                       tabs: service.stages.map((stage) => {
                         if (typeof stage === 'string') {
+                          const lambdaName = yml.functions[fnName]?.name || `${yml.service.name}-${stage}-${fnName}`
                           return {
                             title: stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
-                            lambda: `${yml.service.name}-${stage}-${fnName}`,
+                            logs: `/aws/lambda/${lambdaName}`,
+                            lambda: lambdaName,
                           }
                         } else {
+                          const lambdaName = yml.functions[fnName]?.name || `${yml.service.name}-${stage.stage}-${fnName}`
                           return {
                             title: stage.title || stage.stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
-                            lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
+                            logs: `/aws/lambda/${lambdaName}`,
+                            lambda: lambdaName,
                             awsProfile: stage.awsProfile,
                             region: stage.region,
                           }
