@@ -41,6 +41,7 @@ type ServerlessYML = {
     name: string
   }
   provider: {
+    stage: string
     region: string
     name: string
     runtime: string
@@ -227,14 +228,20 @@ export function serverlessFrameworkService(
                       timeOffsetInMs: service.timeOffsetInMs,
                       tabs: service.stages.map((stage) => {
                         if (typeof stage === 'string') {
-                          const lambdaName = yml.functions[fnName]?.name || `${yml.service.name}-${stage}-${fnName}`
+                          let lambdaName = `${yml.service.name}-${stage}-${fnName}` // default name
+                          if (yml.functions[fnName]?.name && yml.functions[fnName].name.includes(yml.provider.stage)) { // name is not undefined and includes with the yml's stage
+                            lambdaName = yml.functions[fnName].name.replace(yml.provider.stage, stage) // replace with custom stage
+                          }
                           return {
                             title: stage,
                             logs: `/aws/lambda/${lambdaName}`,
                             lambda: lambdaName,
                           }
                         } else {
-                          const lambdaName = yml.functions[fnName]?.name || `${yml.service.name}-${stage.stage}-${fnName}`
+                          let lambdaName = `${yml.service.name}-${stage.stage}-${fnName}` // default name
+                          if (yml.functions[fnName]?.name && yml.functions[fnName].name.includes(yml.provider.stage)) { // name is not undefined and includes with the yml's stage
+                            lambdaName = yml.functions[fnName].name.replace(yml.provider.stage, stage.stage) // replace with custom stage
+                          }
                           return {
                             title: stage.title || stage.stage,
                             logs: `/aws/lambda/${lambdaName}`,
