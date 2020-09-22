@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.7.4] 22 Sep 2020
+- Added ability to define "sls print" commands per stage
+
 ## [0.7.2] 07 Sep 2020
 - Fixed issue #31
 

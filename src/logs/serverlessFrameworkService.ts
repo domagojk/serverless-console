@@ -3,8 +3,9 @@ import * as vscode from 'vscode'
 import * as YAML from 'yaml'
 import * as path from 'path'
 import { readdirSync } from 'fs'
+import { serverlessFrameworkMultipleStages } from './serverlessFrameworkMultipleStages'
 
-interface ServerlessFrameworkInput {
+export interface ServerlessFrameworkInput {
   hash: string
   awsProfile: string
   type: 'serverlessFramework'
@@ -13,6 +14,10 @@ interface ServerlessFrameworkInput {
   title?: string
   cwd?: string
   command?: string
+  commandsPerStage?: {
+    stage: string
+    command: string
+  }[]
   stages?: any[]
   envVars?: { key: string; value: string }[]
 }
@@ -35,7 +40,7 @@ export interface ServerlessFrameworkOutput extends ServerlessFrameworkInput {
   }[]
 }
 
-type ServerlessYML = {
+export type ServerlessYML = {
   org: string
   service: {
     name: string
@@ -49,6 +54,7 @@ type ServerlessYML = {
   functions: Record<
     string,
     {
+      name?: string
       handler: string
       events: {
         http: {
@@ -67,14 +73,144 @@ const serverlessDefaults = {
   },
 }
 
-export function serverlessFrameworkService(
+export async function serverlessFrameworkService(
   service: ServerlessFrameworkInput
 ): Promise<ServerlessFrameworkOutput> {
-  return new Promise((resolve) => {
-    // using spawn instead of exec
-    // because there was use case when stdout retutned a correct definition,
-    // and yet after 5+ seconds, stderr returned "socket hang up" error
+  if (service?.commandsPerStage?.length) {
+    return serverlessFrameworkMultipleStages(service)
+  }
 
+  const { yml, error } = await slsPrintOutputToJson({
+    command: service.command,
+    cwd: service.cwd,
+    envVars: service.envVars,
+  })
+
+  if (error) {
+    return {
+      ...service,
+      error,
+      items: [],
+    }
+  }
+
+  if (Array.isArray(yml.functions)) {
+    let functionsArr = yml.functions
+    yml.functions = {}
+    functionsArr.forEach((fun) => {
+      yml.functions = {
+        ...yml.functions,
+        ...fun,
+      }
+    })
+  }
+
+  const dynamodbResources = Object.keys(yml.resources?.Resources || {})
+    .reduce((acc, curr) => {
+      return [...acc, yml.resources.Resources[curr]]
+    }, [])
+    .filter((resource) => {
+      return (
+        resource.Type === 'AWS::DynamoDB::Table' &&
+        resource?.Properties?.TableName
+      )
+    })
+    .map((resource) => {
+      return {
+        type: 'dynamodb',
+        title: resource.Properties.TableName,
+        tableName: resource.Properties.TableName,
+        awsProfile: service.awsProfile,
+        region: service.region || yml.provider.region,
+      }
+    })
+
+  return {
+    ...service,
+    title: service.title || yml.service.name,
+    region: service.region || yml.provider.region,
+    icon: 'serverless-logs.png',
+    items: [
+      ...Object.keys(yml.functions).map((fnName) => {
+        const handler = yml.functions[fnName].handler
+        const handlerArr = handler.split(path.sep)
+        const handlerRelativeDir = handlerArr
+          .slice(0, handlerArr.length - 1)
+          .join(path.sep)
+
+        const handlerAbsDir = path.join(service.cwd, handlerRelativeDir)
+
+        let foundFile
+        try {
+          const filesInDir = readdirSync(handlerAbsDir)
+          foundFile = filesInDir.find((fileName) => {
+            const nameArr = fileName.split('.')
+            const handlerFileName = handlerArr[handlerArr.length - 1].split(
+              '.'
+            )[0]
+            return nameArr.length === 2 && nameArr[0] === handlerFileName
+          })
+        } catch (err) {}
+
+        const httpEvent =
+          yml.functions[fnName].events && yml.functions[fnName].events.length
+            ? yml.functions[fnName].events.find((event) => event.http)
+            : null
+
+        return {
+          error: null,
+          title: fnName,
+          uri: foundFile
+            ? vscode.Uri.file(path.join(handlerAbsDir, foundFile))
+            : null,
+          description: httpEvent
+            ? `${httpEvent.http.method.toUpperCase()} /${httpEvent.http.path}`
+            : null,
+          command: {
+            command: 'serverlessConsole.openLogs',
+            title: 'Open Logs',
+            arguments: [
+              {
+                region: service.region || yml.provider.region,
+                awsProfile: service.awsProfile,
+                timeOffsetInMs: service.timeOffsetInMs,
+                tabs: service.stages.map((stage) => {
+                  if (typeof stage === 'string') {
+                    return {
+                      title: stage,
+                      logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
+                      lambda: `${yml.service.name}-${stage}-${fnName}`,
+                    }
+                  } else {
+                    return {
+                      title: stage.title || stage.stage,
+                      logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
+                      lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
+                      awsProfile: stage.awsProfile,
+                      region: stage.region,
+                    }
+                  }
+                }),
+              },
+            ],
+          },
+          icon: 'lambda',
+        }
+      }),
+      ...dynamodbResources,
+    ],
+  }
+}
+
+export function slsPrintOutputToJson(service: {
+  command: string
+  envVars?: { key: string; value: string }[]
+  cwd: string
+}): Promise<{
+  yml?: ServerlessYML
+  error?: string
+}> {
+  return new Promise((resolve) => {
     const commandArr = service.command.split(' ')
 
     const child =
@@ -134,123 +270,13 @@ export function serverlessFrameworkService(
         }
 
         if (yml.provider.name.toLowerCase() !== 'aws') {
-          resolve({
-            ...service,
+          return resolve({
             error: 'only aws provider is supported at the moment',
-            items: [],
           })
         }
 
-        if (Array.isArray(yml.functions)) {
-          let functionsArr = yml.functions
-          yml.functions = {}
-          functionsArr.forEach((fun) => {
-            yml.functions = {
-              ...yml.functions,
-              ...fun,
-            }
-          })
-        }
-
-        const dynamodbResources = Object.keys(yml.resources?.Resources || {})
-          .reduce((acc, curr) => {
-            return [...acc, yml.resources.Resources[curr]]
-          }, [])
-          .filter((resource) => {
-            return (
-              resource.Type === 'AWS::DynamoDB::Table' &&
-              resource?.Properties?.TableName
-            )
-          })
-          .map((resource) => {
-            return {
-              type: 'dynamodb',
-              title: resource.Properties.TableName,
-              tableName: resource.Properties.TableName,
-              awsProfile: service.awsProfile,
-              region: service.region || yml.provider.region,
-            }
-          })
-
-        resolve({
-          ...service,
-          title: service.title || yml.service.name,
-          region: service.region || yml.provider.region,
-          icon: 'serverless-logs.png',
-          items: [
-            ...Object.keys(yml.functions).map((fnName) => {
-              const handler = yml.functions[fnName].handler
-              const handlerArr = handler.split(path.sep)
-              const handlerRelativeDir = handlerArr
-                .slice(0, handlerArr.length - 1)
-                .join(path.sep)
-
-              const handlerAbsDir = path.join(service.cwd, handlerRelativeDir)
-
-              let foundFile
-              try {
-                const filesInDir = readdirSync(handlerAbsDir)
-                foundFile = filesInDir.find((fileName) => {
-                  const nameArr = fileName.split('.')
-                  const handlerFileName = handlerArr[
-                    handlerArr.length - 1
-                  ].split('.')[0]
-                  return nameArr.length === 2 && nameArr[0] === handlerFileName
-                })
-              } catch (err) {}
-
-              const httpEvent =
-                yml.functions[fnName].events &&
-                yml.functions[fnName].events.length
-                  ? yml.functions[fnName].events.find((event) => event.http)
-                  : null
-
-              return {
-                error: null,
-                title: fnName,
-                uri: foundFile
-                  ? vscode.Uri.file(path.join(handlerAbsDir, foundFile))
-                  : null,
-                description: httpEvent
-                  ? `${httpEvent.http.method.toUpperCase()} /${
-                      httpEvent.http.path
-                    }`
-                  : null,
-                command: {
-                  command: 'serverlessConsole.openLogs',
-                  title: 'Open Logs',
-                  arguments: [
-                    {
-                      region: service.region || yml.provider.region,
-                      awsProfile: service.awsProfile,
-                      timeOffsetInMs: service.timeOffsetInMs,
-                      tabs: service.stages.map((stage) => {
-                        if (typeof stage === 'string') {
-                          return {
-                            title: stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage}-${fnName}`,
-                            lambda: `${yml.service.name}-${stage}-${fnName}`,
-                          }
-                        } else {
-                          return {
-                            title: stage.title || stage.stage,
-                            logs: `/aws/lambda/${yml.service.name}-${stage.stage}-${fnName}`,
-                            lambda: `${yml.service.name}-${stage.stage}-${fnName}`,
-                            awsProfile: stage.awsProfile,
-                            region: stage.region,
-                          }
-                        }
-                      }),
-                    },
-                  ],
-                },
-                icon: 'lambda',
-              }
-            }),
-            ...dynamodbResources,
-          ],
-        })
         child.kill()
+        resolve({ yml })
       } else if (outputJson) {
         stdout = String(outputJson)
         outputJson = null
@@ -302,9 +328,7 @@ export function serverlessFrameworkService(
     child.on('close', () => {
       if (!outputJson) {
         resolve({
-          ...service,
           error: stderr || stdout,
-          items: [],
         })
       }
     })
