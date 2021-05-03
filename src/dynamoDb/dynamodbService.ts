@@ -17,6 +17,11 @@ interface DynamoServiceInput {
   region: string
   title?: string
   endpoint?: string
+  defaultQuery?: {
+    queryType: string
+    selectedIndex: number
+    selectedQueryFilters: any
+  }
 }
 
 export interface DynamoServiceOutput extends DynamoServiceInput {
@@ -180,6 +185,7 @@ export async function dynamoDbService(
       awsProfile: service.awsProfile,
       endpoint: service.endpoint,
       region: service.region,
+      defaultQuery: service.defaultQuery,
       changes: folderListForAll,
       tableDetails,
       tmpDir,
@@ -192,6 +198,7 @@ export async function dynamoDbService(
         {
           title: 'Items',
           icon: 'dynamoDb-items',
+          contextValue: 'dynamodb-items',
           command: {
             command: 'serverlessConsole.openDynamoDb',
             title: 'Open DynamoDB Table',

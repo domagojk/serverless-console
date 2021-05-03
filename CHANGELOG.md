@@ -2,6 +2,9 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.7.6] 03 May 2021
+- Added support for default DynamodDb query
+
 ## [0.7.5] 26 Nov 2020
 - Fixed issue #34
 

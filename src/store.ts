@@ -38,6 +38,11 @@ export type ServiceState = {
   }[]
   onChangesUpdated?: vscode.EventEmitter<DynamoDbFileChange[]>
   tableDetails?: DynamoDbTableDesc
+  defaultQuery?: {
+    queryType: string
+    selectedIndex: number
+    selectedQueryFilters: any
+  }
   tmpDir?: string
   region?: string
   tableName?: string

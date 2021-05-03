@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { TreeItem } from '../TreeItem'
-import { TreeDataProvider } from '../treeDataProvider'
+import { getServiceHash } from '../settings'
 import { join } from 'path'
 import { getWebviewHtml } from '../logs/functionLogsWebview'
 import { getFontSize, getFontFamily } from '../settings'
@@ -47,6 +47,12 @@ export const openDynamoDb = (
       }
     )
 
+    const serviceState = store.getState(commandData.serviceHash)
+    let defaultQuery = null;
+    try {
+      defaultQuery = JSON.stringify(serviceState.defaultQuery);
+    } catch(err) { }
+
     treeItem.panel.webview.html = await getWebviewHtml({
       panel: treeItem.panel,
       fontSize: getFontSize(),
@@ -63,7 +69,8 @@ export const openDynamoDb = (
         document.vscodeData = {
           page: 'dynamoDb',
           fontSize: "${getFontSize()}",
-          fontFamily: "${getFontFamily()}"
+          fontFamily: "${getFontFamily()}",
+          defaultQuery: ${defaultQuery || 'null'}
         }
       `,
     })
@@ -149,6 +156,25 @@ export const openDynamoDb = (
           }
           case 'dynamodbOptions': {
             dynamoDbOptions(message, treeItem)
+            break
+          }
+          case 'saveQueryAsDefault': {
+            const currentServices: any[] =
+              vscode.workspace.getConfiguration().get('serverlessConsole.services') ||
+              []
+
+            vscode.workspace
+              .getConfiguration()
+              .update('serverlessConsole.services', currentServices.map(service => {
+                const hash = getServiceHash(service);
+                if (hash === treeItem.serviceHash) {
+                  return {
+                    ...service,
+                    defaultQuery: message.payload
+                  }
+                }
+                return service
+              }))
             break
           }
         }

@@ -84,6 +84,18 @@ export async function dynamodbInit(
     }
   )
 
+  vscode.commands.registerCommand(
+    'serverlessConsole.saveCurrentQueryAsDefault',
+    async (treeItem: TreeItem) => {
+      if (!treeItem?.serviceHash) {
+        return null
+      }
+      treeItem.panel?.webview?.postMessage({
+        type: 'saveAsDefault',
+      })
+    }
+  )
+
   vscode.workspace.onDidSaveTextDocument((e) => {
     const caseInsFsPath = e.uri.fsPath.toLowerCase()
     const caseInsServiceTmpDir = serviceTmpDir.toLowerCase()
