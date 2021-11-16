@@ -335,7 +335,7 @@
   },
   "dependencies": {
     "@aws-sdk/shared-ini-file-loader": "0.1.0-preview.1",
-    "aws-sdk": "^2.541.0",
+    "aws-sdk": "^2.814.0",
     "axios": "^0.19.2",
     "cross-spawn": "^7.0.1",
     "fs-extra": "^8.1.0",
