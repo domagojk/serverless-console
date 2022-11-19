@@ -331,7 +331,7 @@
     "typescript": "^3.8.3",
     "vscode-test": "^1.2.0",
     "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.10"
+    "webpack-cli": "^3.3.12"
   },
   "dependencies": {
     "@aws-sdk/shared-ini-file-loader": "0.1.0-preview.1",
