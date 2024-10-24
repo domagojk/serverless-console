@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { join } from 'path'
-import { omitBy } from 'lodash'
+import { omitBy, uniq } from 'lodash'
 import { loadSharedConfigFiles } from '@aws-sdk/shared-ini-file-loader'
 import { getFontSize, getServiceHash, prepareService } from './settings'
 import { getWebviewHtml } from './logs/functionLogsWebview'
@@ -42,7 +42,9 @@ export const addService = (context: vscode.ExtensionContext) => async () => {
     panel = null
   })
   const profiles = await loadSharedConfigFiles()
-    .then((res) => Object.keys(res.credentialsFile))
+    .then((res) =>
+      uniq(Object.keys({ ...res.configFile, ...res.credentialsFile }))
+    )
     .catch((err) => [])
 
   panel.webview.html = await getWebviewHtml({

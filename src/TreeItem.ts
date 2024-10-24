@@ -60,6 +60,7 @@ export class TreeItem extends vscode.TreeItem {
     this.iconPath = this.iconPathObj
   }
 
+  // @ts-ignore
   get description(): string {
     if (this.settings?.description) {
       return this.settings.description
