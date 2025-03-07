@@ -2,6 +2,10 @@
 
 All notable changes to the "serverless-console" extension will be documented in this file.
 
+## [0.8.1] 24 Feb 2025
+
+- Replaced "buy me a coffee" link with cloud-ui.com promo
+
 ## [0.8.0] 24 Oct 2024
 
 - Cleaned sume dust that piled up over the last 3 years of not working on this project
